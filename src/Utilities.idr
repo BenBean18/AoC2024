@@ -9,30 +9,29 @@ import Data.String
 
 -- Get text from file
 -- Returns "" if error
+public export
 getString : String -> IO String
 getString filename = (readFile filename) >>= (
     \output =>
         pure (fromMaybe "" (getRight output)))
 
--- Get list of lines from a file
-getLines : String -> IO (List String)
-getLines filename = (getString filename) >>= (\string => pure (lines string))
+-- Get list of ints from a string
+public export
+getInts : String -> List Int
+getInts string = map cast (lines string)
 
--- Get list of ints from a file
-getInts : String -> IO (List Int)
-getInts filename = (getLines filename) >>= (\lines => pure (map cast lines))
+-- Get bytes from a string
+public export
+getBytes : String -> List Bits8
+getBytes string = map cast (unpack string)
 
--- Get bytes from a file (why? idk)
-getBytes : String -> IO (List Bits8)
-getBytes filename = (getString filename) >>= (\string => pure (map cast (unpack string)))
+public export
+interface Solution where
+    -- input: contents of input.txt, output: solution to print
+    part1 : String -> Int
+    part2 : String -> Int
 
-main : IO ()
-main = do
-    s <- getString "input.txt"
-    l <- getLines "input.txt"
-    i <- getInts "input.txt"
-    b <- getBytes "input.txt"
-    putStrLn s
-    print l
-    print i
-    print b
+public export
+interface Visualization where
+    -- input: contents of input.txt, output: solution to print, wrapped in an IO monad so we can do fancy visualization stuff
+    visualize : String -> IO String
