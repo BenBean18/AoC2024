@@ -28,7 +28,9 @@ main = do
             let message = "Executing Day " ++ day ++ " Part " ++ part
             putStrLn message
             contents <- getString "src/input.txt"
-            print (Day5_23.part1 contents)
+            if day == "5_23" && part == "1" then print (Day5_23.part1 contents)
+                else if day == "5_23" && part == "2" then print (Day5_23.part2 contents)
+                else putStr "That problem doesn't exist (or I haven't solved it yet)"
             putStrLn ""
         
         else putStrLn "Provide more arguments"

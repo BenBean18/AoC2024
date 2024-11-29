@@ -63,22 +63,20 @@ part1 input =
             (_ :: []) => let seeds : List Int = map cast (words (head seedStrings)) in
                 case seeds of
                     (_ :: actualSeeds) => case actualSeeds of 
-                        (_ :: _) => (trace $ show actualSeeds) minimum (map mapper actualSeeds) -- this proves that it's non empty!! that's very cool :)
+                        (_ :: _) => minimum (map mapper actualSeeds) -- this proves that it's non empty!! that's very cool :)
                         _ => 0
                     _ => 0
             _ => 0
 
 -- Part 2
 
--- ...wait how can we just assert this is true and there are no errors??
-listLengthProof : (xs : List a) -> cast (length xs) `mod` 2 = 0
-
-newSeedParser_ : (list : List Int) -> {auto p : cast (length list) `mod` 2 = 0} -> List Int
-newSeedParser_ (start :: num :: xs) = [start..(start+num-1)] ++ newSeedParser_ xs {p = listLengthProof xs}
+newSeedParser_ : (list : List Int) ->{- {auto p : cast (length list) `mod` 2 = 0} -> -}List Int
+newSeedParser_ (start :: num :: xs) = [start..(start+num-1)] ++ newSeedParser_ xs-- {p = listLengthProof xs}
 newSeedParser_ [] = []
+newSeedParser_ [_] = [] -- this should not happen but idk how to use the type system to force the length to be even yet
 
 newSeedParser : (seeds : List String) -> {auto _ : NonEmpty seeds} -> List Int
-newSeedParser seeds = newSeedParser_ (map cast seeds) {p = listLengthProof (map cast seeds)}
+newSeedParser seeds = newSeedParser_ (map cast seeds)
 
 public export
 part2 : String -> Int
@@ -89,8 +87,11 @@ part2 input =
         case seedStrings of 
             (_ :: []) => let seeds : List String = words $ head seedStrings in
                 case seeds of
-                    (_ :: actualSeeds) => case actualSeeds of 
-                        (_ :: _) => (trace $ show actualSeeds) minimum (map mapper (newSeedParser actualSeeds)) -- this proves that it's non empty!! that's very cool :)
+                    (_ :: actualSeeds) => case actualSeeds of
+                        (_ :: _) => let mappedSeeds = map mapper (newSeedParser actualSeeds) in
+                            case mappedSeeds of
+                                (_ :: _) => minimum mappedSeeds
+                                _ => 0
                         _ => 0
                     _ => 0
             _ => 0
