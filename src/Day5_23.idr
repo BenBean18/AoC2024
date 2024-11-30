@@ -54,7 +54,6 @@ combineMappingsParallel [] = id
 parseMap : List String -> (Int -> Int)
 parseMap lines = combineMappingsParallel (map parseMapLine lines)
 
-public export
 part1 : String -> Int
 part1 input =
     -- why three colons for a List1/nonempty list, that's weird
@@ -79,7 +78,6 @@ newSeedParser_ [_] = [] -- this should not happen but idk how to use the type sy
 newSeedParser : (seeds : List String) -> {auto _ : NonEmpty seeds} -> List Int
 newSeedParser seeds = newSeedParser_ (map cast seeds)
 
-public export
 part2 : String -> Int
 part2 input =
     -- why three colons for a List1/nonempty list, that's weird
