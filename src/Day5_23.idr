@@ -4,6 +4,7 @@ import Data.String
 import Data.List
 import Data.List1
 import Debug.Trace
+import Data.Fin
 
 -- "seeds: 79 14 55 13"
 -- [79, 14, 55, 13]
@@ -95,3 +96,8 @@ part2 input =
                         _ => 0
                     _ => 0
             _ => 0
+
+public export
+solve : Fin 2 -> String -> Int
+solve 0 = part1
+solve 1 = part2

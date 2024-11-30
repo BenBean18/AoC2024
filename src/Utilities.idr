@@ -4,6 +4,7 @@ import System.File
 import Data.Either
 import Data.Maybe
 import Data.String
+import Data.Fin
 
 -- Note: `:search [signature]` in REPL is equivalent to Hoogle
 
@@ -27,9 +28,8 @@ getBytes string = map cast (unpack string)
 
 public export
 interface Solution where
-    -- input: contents of input.txt, output: solution to print
-    part1 : String -> Int
-    part2 : String -> Int
+    -- input: part and contents of input.txt, output: solution to print
+    solve : Fin 2 -> String -> Int
 
 public export
 interface Visualization where

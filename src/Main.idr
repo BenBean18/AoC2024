@@ -24,13 +24,15 @@ main = do
     if (length args >= 3) then
         do
             let day = fromMaybe "" (args `index` 1)
-            let part = fromMaybe "" (args `index` 2)
-            let message = "Executing Day " ++ day ++ " Part " ++ part
-            putStrLn message
-            contents <- getString "src/input.txt"
-            if day == "5_23" && part == "1" then print (Day5_23.part1 contents)
-                else if day == "5_23" && part == "2" then print (Day5_23.part2 contents)
-                else putStr "That problem doesn't exist (or I haven't solved it yet)"
-            putStrLn ""
+            let partStr = fromMaybe "" (args `index` 2)
+            case integerToFin (cast partStr - 1) 2 of
+                Just part => do
+                    let message = "Executing Day " ++ day ++ " Part " ++ partStr
+                    putStrLn message
+                    contents <- getString $ "input/" ++ day ++ ".txt"
+                    if day == "5_23" then print (Day5_23.solve part contents)
+                        else putStr "That problem doesn't exist (or I haven't solved it yet)"
+                    putStrLn ""
+                Nothing => putStrLn $ "Part " ++ partStr ++ " is invalid"
         
         else putStrLn "Provide more arguments"
