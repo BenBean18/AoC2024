@@ -31,8 +31,15 @@ part1 input =
 
 -- Part 2
 
+count : (Eq a) => List a -> a -> Int
+count (x :: xs) el = (if x == el then 1 else 0) + count xs el
+count [] _ = 0
+
 part2 : String -> Int
-part2 input = 2
+part2 input =
+    let lines = map parseLine (lines input)
+        (a, b) = toLists lines
+        counts = map (\el => (el * count b el)) a in sum counts
 
 public export
 solve : Fin 2 -> String -> Int
