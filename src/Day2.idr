@@ -11,10 +11,11 @@ import Data.Nat
 allIncreasingOrDecreasing : (Eq a, Ord a) => List a -> Bool
 allIncreasingOrDecreasing l = (l == sort l) || (l == reverse (sort l))
 
+-- ...https://github.com/BenBean18/AoC2023/blob/main/src/Day9.hs#L20-L21
 differenceList : List Int -> List Int
-differenceList (a :: b :: xs) = abs (a - b) :: differenceList (b :: xs)
-differenceList [] = []
-differenceList [_] = []
+differenceList ints = case ints of
+    (_ :: _) => map abs (zipWith (-) (tail ints) (init ints))
+    _ => []
 
 isSafe : (xs : List Int) -> Int
 isSafe l =  let differences = differenceList l
