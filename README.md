@@ -26,6 +26,8 @@ count : (Eq a) => List a -> a -> Int
 count (x :: xs) el = (if x == el then 1 else 0) + count xs el
 count [] _ = 0
 ```
+(edit: after discussion, `count xs el = sum (map (\el => if x == el then 1 else 0) xs)` is a LOT nicer)
+
 I forgot the `el` in `count b el` here `map (\el => (el * count b el)) a` which was confusing me (it was throwing a type error), but then I realized (I had went from `map (count b) a` to the above statement and forgot to change it :/)
 
 Anyway, not too much that was exciting today, but functional programming is always nice!
