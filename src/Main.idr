@@ -8,6 +8,8 @@ import Data.Maybe
 import Data.Fin
 import Data.Nat
 import Data.List
+import System.Clock
+import Debug.Trace
 import Day5_23
 import Day1
 import Day2
@@ -20,6 +22,30 @@ index (x :: xs) Z = Just x
 index (x :: xs) (S k) = index xs k
 index [] _ = Nothing
 
+runMultipleTimes : Nat -> IO a -> IO (List a)
+runMultipleTimes Z f = pure []
+runMultipleTimes (S k) f = do
+    a <- f
+    b <- runMultipleTimes k f
+    pure (a :: b)
+
+bench' : (String -> Int) -> String -> IO Integer
+bench' f input = do
+    start <- clockTime Process
+    a <- pure (f input)
+    end <- clockTime Process
+    pure (nanoseconds (timeDifference end start) `div` 1_000)
+
+bench : (String -> Int) -> String -> IO ()
+bench f input = do
+    runtimes <- runMultipleTimes 100 (bench' f input)
+    putStr $ show (sum runtimes `div` 100) ++ "us"
+
+runPart : (String -> Int) -> String -> IO ()
+runPart f input = do
+    let soln = f input
+    putStr $ show soln
+
 main : IO ()
 main = do
     args <- getArgs
@@ -27,14 +53,16 @@ main = do
         do
             let day = fromMaybe "" (args `index` 1)
             let partStr = fromMaybe "" (args `index` 2)
+            let doBench = fromMaybe "" (args `index` 3) == "b"
             case integerToFin (cast partStr - 1) 2 of
                 Just part => do
-                    let message = "Executing Day " ++ day ++ " Part " ++ partStr
+                    let message = (if doBench then "Benchmarking" else "Executing") ++ " Day " ++ day ++ " Part " ++ partStr
                     putStrLn message
                     contents <- getString $ "input/" ++ day ++ ".txt"
-                    if day == "5_23" then print (Day5_23.solve part contents)
-                        else if day == "1" then print (Day1.solve part contents)
-                        else if day == "2" then print (Day2.solve part contents)
+                    let run = if doBench then bench else runPart
+                    if day == "5_23" then run (Day5_23.solve part) contents
+                        else if day == "1" then run (Day1.solve part) contents
+                        else if day == "2" then run (Day2.solve part) contents
                         else putStr "That problem doesn't exist (or I haven't solved it yet)"
                     putStrLn ""
                 Nothing => putStrLn $ "Part " ++ partStr ++ " is invalid"
