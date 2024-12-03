@@ -30,14 +30,13 @@ show' (Mul a b) = show a ++ "*" ++ show b
 show' Enable = "en"
 show' Disable = "dis"
 
-(Show a, Num a) => Show (Instruction a) where
+-- works to show an instruction
+(Show a) => (Num a) => Show (Instruction a) where
     show instr = show' instr
 
--- WHY DO WE NEED THIS FOR SHOW TO WORK
--- THE ABOVE ONE SHOULD WORK
--- WHAT IS HAPPENING
-Show (Instruction Int) where
-    show instr = show' instr
+-- doesn't work to show an instruction (no implementation for Instruction Integer)
+-- (Show a, Num a) => Show (Instruction a) where
+--     show instr = show' instr
 
 parsePotentialMul : List Char -> List Char -> Bool -> List Char -> Maybe (Instruction Int)
 parsePotentialMul (c :: text) currentNum1 num2Yet currentNum2 =

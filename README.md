@@ -53,3 +53,23 @@ After that fix, it worked on the sample and on the real input.
 
 **Part 2: #2530 in 00:18:46, runtime: 3.542ms**
 Not too bad, just some old fashioned brute force. The thing that tripped me up the most was I initially summed up ones for *all* lists with one element removed, but it should only be 1 if one of them is valid and 0 otherwise. After that fix, it worked :)
+
+### Day 3
+
+**Part 1: #1939 in 00:05:48**
+Python, regex in VS Code, because I thought I could do it fast but really couldn't
+
+`mul\(\d+,\d+\)`
+
+Solved it decently quickly, then
+
+**Part 2: #7331 in 00:37:00, runtime: 168us**
+could you tell I switched languages? :)
+
+worked on Idris parsing which took much longer and I'm still cleaning it up, initially read numbers backwards because `(newChar :: existingNumString)` is not `(existingNumString ++ [newChar])` ...oops
+
+TODO use https://github.com/kasiaMarek/TyRE maybe, idk
+
+But in this silly journey we fell down a dependent typing rabbit hole trying to constrain my `Instruction` type to only be numeric, which probably would have happened anyway
+
+I need sleep but this is really interesting
