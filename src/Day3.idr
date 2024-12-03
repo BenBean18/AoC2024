@@ -25,14 +25,11 @@ data Instruction : (a: Type) -> {auto p : Num a} -> Type where
     Enable : {auto p : Num a} -> Instruction a
     Disable : {auto p : Num a} -> Instruction a
 
-show' : forall a. (Show a, Num a) => Instruction a -> String
-show' (Mul a b) = show a ++ "*" ++ show b
-show' Enable = "en"
-show' Disable = "dis"
-
 -- works to show an instruction
 (Show a) => (Num a) => Show (Instruction a) where
-    show instr = show' instr
+    show (Mul a b) = show a ++ "*" ++ show b
+    show Enable = "en"
+    show Disable = "dis"
 
 -- doesn't work to show an instruction (no implementation for Instruction Integer)
 -- (Show a, Num a) => Show (Instruction a) where

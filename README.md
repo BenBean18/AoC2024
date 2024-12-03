@@ -73,3 +73,5 @@ TODO use https://github.com/kasiaMarek/TyRE maybe, idk
 But in this silly journey we fell down a dependent typing rabbit hole trying to constrain my `Instruction` type to only be numeric, which probably would have happened anyway
 
 I need sleep but this is really interesting
+
+also it might snow but it's not snowing which makes us snow sad (even checked 4W alcove window)
