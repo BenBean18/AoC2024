@@ -6,11 +6,6 @@ import Debug.Trace
 import Data.Fin
 import Utilities
 
--- Part 1: initially done in frantic VS Code regex/python
-
-part1 : String -> Int
-part1 input = 1
-
 -- Part 2
 
 data Instruction a = Mul a a | Enable | Disable
@@ -56,6 +51,17 @@ mul(363,974)
 part2 : String -> Int
 part2 input =
     let instrs = parseInstructions (unpack input) in (trace $ show instrs) execInstructions instrs True
+
+-- Part 1: initially done in frantic VS Code regex/python
+
+execInstructions1 : List (Instruction Int) -> Bool -> Int
+execInstructions1 ((Mul a b) :: xs) en = (if en then (a * b) else 0) + (execInstructions1 xs en)
+execInstructions1 (Enable :: xs) en = execInstructions1 xs True
+execInstructions1 (Disable :: xs) en = execInstructions1 xs True
+execInstructions1 [] _ = 0
+
+part1 : String -> Int
+part1 input = execInstructions1 (parseInstructions (unpack input)) True
 
 public export
 solve : Fin 2 -> String -> Int
