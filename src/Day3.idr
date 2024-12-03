@@ -23,8 +23,8 @@ Show (Instruction Int) where
 parsePotentialMul : List Char -> List Char -> Bool -> List Char -> Maybe (Instruction Int)
 parsePotentialMul (c :: text) currentNum1 num2Yet currentNum2 =
     if isDigit c then
-        if num2Yet then parsePotentialMul text currentNum1 num2Yet (c :: currentNum2)
-        else parsePotentialMul text (c :: currentNum1) num2Yet currentNum2
+        if num2Yet then parsePotentialMul text currentNum1 num2Yet (currentNum2 ++ [c])
+        else parsePotentialMul text (currentNum1 ++ [c]) num2Yet currentNum2
     else if c == ',' then parsePotentialMul text currentNum1 True currentNum2
     else if c == ')' then Just (Mul ((the (String -> Int) cast) (pack currentNum1)) ((the (String -> Int) cast) (pack currentNum2)))
     else Nothing
