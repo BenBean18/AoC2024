@@ -58,5 +58,6 @@ memoize' f input = do
             modifySTRef memoRef (insert input output)
             pure output
 
+public export
 memoize : (Ord a) => (a -> b) -> (a -> b)
 memoize f input = runST (memoize' f input)
