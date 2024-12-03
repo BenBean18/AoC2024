@@ -8,12 +8,36 @@ import Utilities
 
 -- Part 2
 
-data Instruction a = Mul a a | Enable | Disable
+-- Initial signature (Num a) => (b: a) -> Type resulted in
+-- Num a -> Type, so a: Type that is numeric
+-- b is an instance of type a
+-- so Instruction 1 is valid, but Instruction Int is not
+-- For this to work, a needs to be the Type of a Type (aka *)
+-- and b needs to be a Type that has type a (aka the Type of a Type)
+-- and Idris 2 doesn't have this yet (Cumulativity) :(
 
+-- Dependent typing: going from values to types (up the hierarchy, e.g. from star to box)
+
+-- We want Instruction : a -> Type, where there is an implementation of Num a
+-- and a is a type
+data Instruction : (a: Type) -> {auto p : Num a} -> Type where
+    Mul : (x : a) -> (y : a) -> {auto p : Num a} -> Instruction a
+    Enable : {auto p : Num a} -> Instruction a
+    Disable : {auto p : Num a} -> Instruction a
+
+show' : forall a. (Show a, Num a) => Instruction a -> String
+show' (Mul a b) = show a ++ "*" ++ show b
+show' Enable = "en"
+show' Disable = "dis"
+
+(Show a, Num a) => Show (Instruction a) where
+    show instr = show' instr
+
+-- WHY DO WE NEED THIS FOR SHOW TO WORK
+-- THE ABOVE ONE SHOULD WORK
+-- WHAT IS HAPPENING
 Show (Instruction Int) where
-    show (Mul a b) = show a ++ "*" ++ show b
-    show Enable = "en"
-    show Disable = "dis"
+    show instr = show' instr
 
 parsePotentialMul : List Char -> List Char -> Bool -> List Char -> Maybe (Instruction Int)
 parsePotentialMul (c :: text) currentNum1 num2Yet currentNum2 =
@@ -43,7 +67,7 @@ execInstructions (Disable :: xs) en = execInstructions xs False
 execInstructions [] _ = 0
 
 {-
-IM PARSING INPUTS BACKWARDS
+I WAS PARSING INPUTS BACKWARDS
 mul(363,974)
 [363*479
  -}
