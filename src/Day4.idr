@@ -61,7 +61,7 @@ part1 input =
     let theLines = map unpack (lines input) in
         case theLines of
             (_ :: _) =>
-                let toConsider = (rows theLines) ++ (cols theLines) ++ (majors theLines) in (trace $ show (zip (rows theLines) (map howManyInLine (rows theLines))) ++ "\n" ++ show (zip (cols theLines) (map howManyInLine (cols theLines))) ++ " " ++ show (horizontal theLines) ++ " " ++ show (vertical theLines)) $ sum (map howManyInLine toConsider) + (horizontal theLines) + (vertical theLines)
+                let toConsider = (rows theLines) ++ (cols theLines) ++ (majors theLines) in {-(trace $ show (zip (rows theLines) (map howManyInLine (rows theLines))) ++ "\n" ++ show (zip (cols theLines) (map howManyInLine (cols theLines))) ++ " " ++ show (horizontal theLines) ++ " " ++ show (vertical theLines)) $ -}sum (map howManyInLine toConsider) + (horizontal theLines) + (vertical theLines)
             _ => 0
 
 -- Not 2631 or 2630
@@ -110,8 +110,20 @@ part2 input =
     let theLines = pair2DWithIndices (map unpack (lines input)) in
     case theLines of
         (_ :: _) =>
-            let diagsToConsider = (rows theLines) ++ (cols theLines) ++ (majors theLines) in (trace $ show diagsToConsider ++ "\n\n\n" ++ show (map findMAS diagsToConsider) ++ "\n\n\n" ++ show (countDupes (map findMAS diagsToConsider))) $ countMAS diagsToConsider
+            let diagsToConsider = (rows theLines) ++ (cols theLines) ++ (majors theLines) in {-(trace $ show diagsToConsider ++ "\n\n\n" ++ show (map findMAS diagsToConsider) ++ "\n\n\n" ++ show (countDupes (map findMAS diagsToConsider))) $-} countMAS diagsToConsider
         _ => 0
+
+{-
+1 2 3
+. 4 5 6
+. . 7 8 9
+ -}
+
+{-
+1 4 7
+. 2 5 8
+. . 3 6 9
+ -}
 
 public export
 solve : Fin 2 -> String -> Int

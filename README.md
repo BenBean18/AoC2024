@@ -75,3 +75,59 @@ But in this silly journey we fell down a dependent typing rabbit hole trying to 
 I need sleep but this is really interesting
 
 also it might snow but it's not snowing which makes us snow sad (even checked 4W alcove window)
+
+### Day 4
+This one was a bit annoying. /shrug
+
+**Part 1: #6614 in 00:32:23, runtime: 7.965ms**
+
+I was happy with counting the `XMAS`es in the lines, just string pattern matching `('X' :: 'M' :: 'A' :: 'S' :: xs)` to see if it exists and then adding 1 if so and if not just recursing to the next character (and checking the reverse as well). Then horizontal checking is just mapping that function over each row and adding up the results (one count for every row), and vertical checking is the transpose.
+
+Major diagonal took me a tiny bit to think about how to do functionally, but it wasn't that bad; just take the top left element and recurse on the rest of the rows of the 2D array with the first column dropped on all of them. 
+
+I did a lot of verification in the REPL, because I was tired and not sure if I did things right. The matrix
+```
+1 2 3
+4 5 6
+7 8 9
+```
+was a useful test case :)
+
+My thought to get the non-major diagonals was to drop each row or column, e.g. dropping rows below
+```
+4 5 6
+7 8 9
+```
+gives `4 8`
+
+and then dropping the next row gives `7`
+
+Which works, but then you need to consider dropping columns also to get above the diagonal (this only gets below the diagonal). And I have to avoid duplicating the major diagonal, which I tried to do multiple ways for speed (and got it wrong) before actually thinking about it and testing in the REPL and getting the correct answer with a correct deduplication, which was:
+
+`(\list => length list /= length l)` (duh, yeah the major diagonal is the only one with a length equal to the length of a list, was glad to think of this but wished I had thought of it earlier)
+
+I also forgot to get the diagonals going the other way (e.g. `3 5 7`, `6 8`, `9`, etc), so that was a simple `map (\row => reverse row) 2d_array`.
+
+This just wasn't the best approach and had a ton of edge cases and was generally annoying.
+
+**Part 2: #7170 in 00:56:03, runtime: 13.417ms**
+
+I had a clear idea initially for how to solve Part 2: just check the coordinates of every `A` in diagonal `MAS`es, and duplicate coordinates form an `X-MAS`. Attaching coordinates to every item in the 2D array took a bit to code and I made a few other silly mistakes, but I eventually got there.
+
+---
+
+A much better method that I learned about after the fact (from some on-hall discussion once we had both solved it) was padding the start of each row with a number of dummy values corresponding to its index and taking the columns of that new array:
+```
+1 2 3
+. 4 5 6
+. . 7 8 9
+```
+gives `1`, `2 4`, `3 5 7`, `6 8`, `9` which is all the "backwards" diagonals, and we can just transpose to get the normal direction diagonals. That would have been a lot nicer to code.
+
+also uh I should read the standard library especially `Data.List`
+```
+Data.List.deleteAt : (idx : Nat) -> (xs : List a) -> {auto 0 _ : InBounds idx xs} -> List a
+deleteAt 0 (_ :: xs) = xs
+deleteAt (S k) (x :: xs) = x :: deleteAt k xs
+```
+this implementation is so cool! would have been very helpful for Day 2 but like unwrapping a `Nat` until it hits `Z` and then removing once that happens is very cool :)
