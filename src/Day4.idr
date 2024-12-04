@@ -74,8 +74,44 @@ part1 input =
 
 -- Part 2
 
+-- Store coordinates with matches
+pairWithIndices' : List a -> Nat -> List (Nat, a)
+pairWithIndices' (x :: xs) idx = (idx, x) :: pairWithIndices' xs (S idx)
+pairWithIndices' [] _ = []
+
+pairWithIndices : List a -> List (Nat, a)
+pairWithIndices l = pairWithIndices' l Z
+
+pair2DWithIndices : List (List a) -> List (List ((Nat, Nat), a))
+pair2DWithIndices l = map (\(rowIdx, row) => map (\(colIdx, cell) => ((rowIdx, colIdx), cell)) (pairWithIndices row)) (pairWithIndices l)
+
+findMAS' : List ((Nat, Nat), Char) -> List (Nat, Nat)
+findMAS' (((rM, cM), 'M') :: ((rA, cA), 'A') :: ((rS, cS), 'S') :: xs) = (rA, cA) :: findMAS' xs
+findMAS' (c :: xs) = findMAS' xs
+findMAS' [] = []
+
+-- MUST BE SORTED
+countDupes' : Eq a => List a -> Int
+countDupes' (a :: b :: xs) =
+    if a == b then 1 + countDupes' xs else countDupes' (b :: xs)
+countDupes' _ = 0
+
+countDupes : Ord a => Eq a => List a -> Int
+countDupes = countDupes' . sort
+
+findMAS : List ((Nat, Nat), Char) -> List (Nat, Nat)
+findMAS l = findMAS' l ++ findMAS' (reverse l)
+
+countMAS : List (List ((Nat, Nat), Char)) -> Int
+countMAS l = countDupes (concat (map findMAS l))
+
 part2 : String -> Int
-part2 input = 2
+part2 input =
+    let theLines = pair2DWithIndices (map unpack (lines input)) in
+    case theLines of
+        (_ :: _) =>
+            let diagsToConsider = (rows theLines) ++ (cols theLines) ++ (majors theLines) in (trace $ show diagsToConsider ++ "\n\n\n" ++ show (map findMAS diagsToConsider) ++ "\n\n\n" ++ show (countDupes (map findMAS diagsToConsider))) $ countMAS diagsToConsider
+        _ => 0
 
 public export
 solve : Fin 2 -> String -> Int
