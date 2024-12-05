@@ -1,0 +1,59 @@
+module Day5
+
+import Data.String
+import Data.List
+import Debug.Trace
+import Data.Fin
+import Utilities
+import Data.List1
+
+-- Part 1
+
+parseRule' : List Char -> (Nat, Nat)
+parseRule' (c1 :: c2 :: '|' :: c4 :: c5 :: []) =
+    let a : Nat = cast (pack [c1, c2])
+        b : Nat = cast (pack [c4, c5]) in (a,b)
+parseRule' _ = (0, 0)
+
+parseRule : String -> (Nat, Nat)
+parseRule = parseRule' . unpack
+
+isValid : List (Nat, Nat) -> List Nat -> Bool
+isValid ((a, b) :: rules) update = trace (show (a,b) ++ " " ++ show (findIndex (==a) update) ++ " " ++ show (findIndex (==b) update) ++ "\n") $
+    let indexA = findIndex (==a) update
+        indexB = findIndex (==b) update in
+        (case indexA of
+            (Just idxA) => case indexB of 
+                (Just idxB) => idxA < idxB
+                _ => True
+            _ => True) && isValid rules update
+isValid _ _ = True
+
+parseUpdate : String -> List Nat
+parseUpdate s = forget (map cast (map pack (splitOn ',' (unpack s))))
+
+middle : List Nat -> Nat
+middle l = case inBounds (((length l) `minus` 1) `div` 2) l of
+    Yes prf => (((length l) `minus` 1) `div` 2) `index` l
+    No _ => 0
+
+r : List (Nat, Nat)
+r = [(47, 53), (97, 13), (97, 61), (97, 47), (75, 29), (61, 13), (75, 53), (29, 13), (97, 29), (53, 29), (61, 53), (97, 53), (61, 29), (47, 13), (75, 47), (97, 75), (47, 61), (75, 61), (47, 29), (75, 13), (53, 13)]
+
+part1 : String -> Int
+part1 input = (trace $ show (splitOn "" (lines input))) $ case forget (splitOn "" (lines input)) of
+    rules' :: updates' :: [] => 
+        let updates = map parseUpdate updates'
+            rules = map parseRule rules'
+            validUpdates = filter (isValid rules) updates in (trace $ show rules) cast (sum (map middle validUpdates))
+    _ => 0
+
+-- Part 2
+
+part2 : String -> Int
+part2 input = 2
+
+public export
+solve : Fin 2 -> String -> Int
+solve 0 = part1
+solve 1 = part2

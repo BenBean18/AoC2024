@@ -129,3 +129,11 @@ public export
 solve : Fin 2 -> String -> Int
 solve 0 = part1
 solve 1 = part2
+
+-- visualization
+-- putStr ("\x1b" ++ "c") -- clears screen, \x1b is ANSI escape
+-- ideally make MASes yellow then highlight As
+visFindMAS' : List ((Nat, Nat), Char) -> List (Nat, Nat)
+visFindMAS' (((rM, cM), 'M') :: ((rA, cA), 'A') :: ((rS, cS), 'S') :: xs) = (rA, cA) :: findMAS' xs
+visFindMAS' (c :: xs) = findMAS' xs
+visFindMAS' [] = []
