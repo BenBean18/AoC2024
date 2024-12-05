@@ -45,7 +45,7 @@ part1 input = case forget (splitOn "" (lines input)) of
     rules' :: updates' :: [] => 
         let updates = map parseUpdate updates'
             rules = map parseRule rules'
-            validUpdates = filter (isValid rules) updates in (trace $ show (length validUpdates)) cast (sum (map middle validUpdates))
+            validUpdates = filter (isValid rules) updates in cast (sum (map middle validUpdates))
     _ => 0
 
 -- Part 2
@@ -74,6 +74,7 @@ brokenRules ((a, b) :: rules) update =
             _ => []) ++ brokenRules rules update
 brokenRules _ _ = []
 
+-- this is a weird "sorting" algorithm
 fix_old : List (Nat, Nat) -> List Nat -> List Nat
 fix_old rules update = case brokenRules rules update of
     (a, b) :: _ => fix_old rules (swapElements update a b)
@@ -107,6 +108,34 @@ Eq (Page rules) where
 {rules : List (Nat, Nat)} -> Ord (Page rules) where
     (<) (Pg a) (Pg b) = length (filter (==(b,a)) rules) == 0
 
+{-
+If Idris used bubble sort, I think this wouldn't work.
+
+Bubble sort swaps adjacent elements if they're misordered.
+75,97,47,61,53 breaks 97|75, and bubble sort catches it because
+they're adjacent.
+
+Bubble sort would not fix 75,47,97,61,53 because 75 and 97
+are not adjacent.
+
+But Idris uses mergesort, and when I tested that second example, it 
+was successfully fixed.
+
+Just did some wikipediaing, this is **exactly** what we're dealing with!
+https://en.wikipedia.org/wiki/Partially_ordered_set
+
+https://arxiv.org/pdf/0707.1532v1
+
+/shrug going to sleep but will think about this more
+
+Topological sort is apparently the right way to do this
+
+It's O(V + E)
+
+(although if you use it to sort a fully ordered set i.e. (Fin n),
+time complexity is O(n + n `choose` 2) = O(n!), since it's effectively
+sorting the directed complete graph on n vertices)
+ -}
 fix : {auto rules : List (Nat, Nat)} -> List (Page rules) -> List (Page rules)
 fix update = sort update
 
@@ -122,13 +151,15 @@ part2 input = case forget (splitOn "" (lines input)) of
         let updates = map parseUpdate updates'
             rules = map parseRule rules'
             invalidUpdates' = filter (\u => not (isValid rules u)) updates
-            invalidUpdates = map (map (natToPage {rules = rules})) invalidUpdates'
+            invalidUpdates = map (map natToPage) invalidUpdates' -- AUTO DETECTING RULES WHAT THE HECK
             fixedUpdates' = map fix invalidUpdates
-            fixedUpdates = map (map (pageToNat)) fixedUpdates' in cast (sum (map middle fixedUpdates))
+            fixedUpdates = map (map pageToNat) fixedUpdates' in cast (sum (map middle fixedUpdates))
     _ => 0
 
 -- I LOVE DEPENDENT TYPING
 -- Optimized version: 27.353ms (14x speedup!!)
+-- ...because you're going from O(n^2) to whatever the std library has
+-- :upside_down:
 
 public export
 solve : Fin 2 -> String -> Int
