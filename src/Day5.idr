@@ -74,19 +74,61 @@ brokenRules ((a, b) :: rules) update =
             _ => []) ++ brokenRules rules update
 brokenRules _ _ = []
 
-fix : List (Nat, Nat) -> List Nat -> List Nat
-fix rules update = case brokenRules rules update of
-    (a, b) :: _ => fix rules (swapElements update a b)
+fix_old : List (Nat, Nat) -> List Nat -> List Nat
+fix_old rules update = case brokenRules rules update of
+    (a, b) :: _ => fix_old rules (swapElements update a b)
     [] => update
+
+part2_old : String -> Int
+part2_old input = case forget (splitOn "" (lines input)) of
+    rules' :: updates' :: [] => 
+        let updates = map parseUpdate updates'
+            rules = map parseRule rules'
+            invalidUpdates = filter (\u => not (isValid rules u)) updates
+            fixedUpdates = map (fix_old rules) invalidUpdates in cast (sum (map middle fixedUpdates))
+    _ => 0
+
+-- Swapping version: 385.275ms
+
+-------------------------------------------------------------------------------
+
+-- actually, the comparison way does work, because otherwise sorting normally doesn't. i think?
+-- when looking at other solutions i saw someone do it so i'll try lol
+
+data Page : List (Nat, Nat) -> Type where
+    Pg : Nat -> Page rules
+
+Eq (Page rules) where
+    (==) (Pg a) (Pg b) = a == b
+
+-- bruh i just spent like 10 minutes to make Idris stop complaining
+-- error: "rules is not accessible in this context."
+-- fix: `{rules : List (Nat, Nat)} -> `
+{rules : List (Nat, Nat)} -> Ord (Page rules) where
+    (<) (Pg a) (Pg b) = length (filter (==(b,a)) rules) == 0
+
+fix : {auto rules : List (Nat, Nat)} -> List (Page rules) -> List (Page rules)
+fix update = sort update
+
+natToPage : {auto rules : List (Nat, Nat)} -> Nat -> Page rules
+natToPage n = Pg n
+
+pageToNat : Page _ -> Nat
+pageToNat (Pg n) = n
 
 part2 : String -> Int
 part2 input = case forget (splitOn "" (lines input)) of
     rules' :: updates' :: [] => 
         let updates = map parseUpdate updates'
             rules = map parseRule rules'
-            invalidUpdates = filter (\u => not (isValid rules u)) updates
-            fixedUpdates = map (fix rules) invalidUpdates in cast (sum (map middle fixedUpdates))
+            invalidUpdates' = filter (\u => not (isValid rules u)) updates
+            invalidUpdates = map (map (natToPage {rules = rules})) invalidUpdates'
+            fixedUpdates' = map fix invalidUpdates
+            fixedUpdates = map (map (pageToNat)) fixedUpdates' in cast (sum (map middle fixedUpdates))
     _ => 0
+
+-- I LOVE DEPENDENT TYPING
+-- Optimized version: 27.353ms (14x speedup!!)
 
 public export
 solve : Fin 2 -> String -> Int
