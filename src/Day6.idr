@@ -30,10 +30,10 @@ s (a1, b1) (a2, b2) = (a1 + a2, b1 + b2)
 
 move : ((Int, Int), (Int, Int)) -> SortedMap (Int, Int) Char -> SortedMap (Int, Int) Char
 move ((r, c), dir) m =
-    let possible = {-(trace $ show (r,c)) $ -}(r, c) `s` dir in
+    let possible = (r, c) `s` dir in
             case (lookup possible m) of
-                Just ch => {-(trace "obs") $ -}if ch == '#' then move ((r, c), (turnRight dir)) m
-                    else {-(trace "mov") $ -}move (possible, dir) (insert (r,c) 'X' m)
+                Just ch => if ch == '#' then move ((r, c), (turnRight dir)) m
+                    else move (possible, dir) (insert (r,c) 'X' m)
                 Nothing => (insert (r,c) 'X' m) -- returning just the map gives off by one error :(
 
 findStart : SortedMap (Int, Int) Char -> ((Int, Int), (Int, Int))
@@ -68,22 +68,23 @@ directionOf' _ = 'X'
 -- brute force should be about 200 seconds, not ideal but i'm tired
 -- good news! it only took ~51 (once I fixed it)!
 isLoop : Bool -> ((Int, Int), (Int, Int)) -> SortedMap (Int, Int) Char -> Bool
-isLoop isFirst ((r, c), dir) m = if directionOf (fromMaybe '.' (lookup (r,c) m)) == dir && not isFirst then {-(trace "true")-} True else
-    let possible = {-(trace $ show (r,c)) $ -}(r, c) `s` dir in
+isLoop isFirst ((r, c), dir) m = if directionOf (fromMaybe '.' (lookup (r,c) m)) == dir && not isFirst then True else
+    let possible = (r, c) `s` dir in
             case (lookup possible m) of
-                Just ch => {-(trace "obs") $ -}if ch == '#' then {-(trace $ "turning right at" ++ show (r,c)) $-} isLoop False ((r, c), (turnRight dir)) m
-                    else {-(trace $ "forward at" ++ show (r,c) ++ " " ++ show dir) $ -}{-(trace "mov") $ -}isLoop False (possible, dir) (insert (r,c) (directionOf' dir) m)
-                Nothing => {-(trace "false")-} False
+                Just ch => if ch == '#' then isLoop False ((r, c), (turnRight dir)) m
+                    else isLoop False (possible, dir) (insert (r,c) (directionOf' dir) m)
+                Nothing => False
 
 allObstacleMaps : SortedMap (Int, Int) Char -> List (SortedMap (Int, Int) Char)
-allObstacleMaps m = let openSquares = filter (\k => ((fromMaybe '*' (lookup k m)) == '.')) (keys m) in
+allObstacleMaps m = let openSquares = filter (\k => ((fromMaybe '*' (lookup k m)) == 'X')) (keys m) in
     map (\sq => insert sq '#' m) openSquares
 
 part2 : String -> Int
 part2 input = 
     let inputMap = twoDStringToMap input
         st = findStart inputMap
-        allMaps = allObstacleMaps inputMap
+        result = move st inputMap
+        allMaps = allObstacleMaps result
         loopMaps = filter (isLoop True st) allMaps in cast (length loopMaps)
 
 -- An optimization is to only place obstacles along the original path, cuts search space by roughly 4x
