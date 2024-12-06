@@ -7,7 +7,7 @@ import Data.Fin
 import Utilities
 import Data.SortedMap
 
--- Part 1
+-- Part 1: runs in 11.773ms
 
 mapIndexed' : Nat -> List a -> ((Nat, a) -> b) -> List b
 mapIndexed' idx (x::xs) f = f (idx, x) :: mapIndexed' (S idx) xs f
@@ -71,15 +71,26 @@ part1 input =
 
 -- Part 2
 
+-- I thought the condition was it had to get back to the start, but cycles exist that don't involve the starting vertex
+-- Which is why I needed the 10000 iteration exit condition
+-- Ugh
+
+directionOf' : (Int, Int) -> Char
+directionOf' (0,1) = '>' 
+directionOf' (0,-1) = '<'
+directionOf' (1,0) = 'v'
+directionOf' (-1,0) = '^'
+directionOf' _ = 'X'
+
 -- brute force should be about 200 seconds, not ideal but i'm tired
-isLoop : Int -> Bool -> ((Int, Int), (Int, Int)) -> ((Int, Int), (Int, Int)) -> SortedMap (Int, Int) Char -> Bool
-isLoop 10000 _ _ _ _ = True -- this should always terminate because it should identify when it's stuck in a cycle! i am confused
-isLoop iters isFirst start ((r, c), dir) m = if ((r,c),dir) == start && not isFirst then (trace "true") True else
+-- good news! it only took ~51 (once I fixed it)!
+isLoop : Bool -> ((Int, Int), (Int, Int)) -> SortedMap (Int, Int) Char -> Bool
+isLoop isFirst ((r, c), dir) m = if directionOf (fromMaybe '.' (lookup (r,c) m)) == dir && not isFirst then {-(trace "true")-} True else
     let possible = {-(trace $ show (r,c)) $ -}(r, c) `s` dir in
             case (lookup possible m) of
-                Just ch => {-(trace "obs") $ -}if ch == '#' then {-(trace $ "turning right at" ++ show (r,c)) $-} isLoop (iters + 1) False start ((r, c), (turnRight dir)) m
-                    else {-(trace $ "forward at" ++ show (r,c) ++ " " ++ show dir) $ -}{-(trace "mov") $ -}isLoop (iters + 1) False start (possible, dir) (insert (r,c) 'X' m)
-                Nothing => (trace "false") False
+                Just ch => {-(trace "obs") $ -}if ch == '#' then {-(trace $ "turning right at" ++ show (r,c)) $-} isLoop False ((r, c), (turnRight dir)) m
+                    else {-(trace $ "forward at" ++ show (r,c) ++ " " ++ show dir) $ -}{-(trace "mov") $ -}isLoop False (possible, dir) (insert (r,c) (directionOf' dir) m)
+                Nothing => {-(trace "false")-} False
 
 allObstacleMaps : SortedMap (Int, Int) Char -> List (SortedMap (Int, Int) Char)
 allObstacleMaps m = let openSquares = filter (\k => ((fromMaybe '*' (lookup k m)) == '.')) (keys m) in
@@ -90,7 +101,7 @@ part2 input =
     let inputMap = parseString input
         st = findStart inputMap
         allMaps = allObstacleMaps inputMap
-        loopMaps = filter (isLoop 0 True st st) allMaps in cast (length loopMaps)
+        loopMaps = filter (isLoop True st) allMaps in cast (length loopMaps)
 
 public export
 solve : Fin 2 -> String -> Int
