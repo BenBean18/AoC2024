@@ -47,11 +47,11 @@ s (a1, b1) (a2, b2) = (a1 + a2, b1 + b2)
 
 move : ((Int, Int), (Int, Int)) -> SortedMap (Int, Int) Char -> SortedMap (Int, Int) Char
 move ((r, c), dir) m =
-    let possible = (trace $ show (r,c)) $ (r, c) `s` dir in
+    let possible = {-(trace $ show (r,c)) $ -}(r, c) `s` dir in
             case (lookup possible m) of
-                Just ch => (trace "obs") $ if ch == '#' then move ((r, c), (turnRight dir)) m
-                    else (trace "mov") $ move (possible, dir) (insert (r,c) 'X' m)
-                Nothing => (insert (r,c) 'X' m)
+                Just ch => {-(trace "obs") $ -}if ch == '#' then move ((r, c), (turnRight dir)) m
+                    else {-(trace "mov") $ -}move (possible, dir) (insert (r,c) 'X' m)
+                Nothing => (insert (r,c) 'X' m) -- returning just the map gives off by one error :(
 
 findStart : SortedMap (Int, Int) Char -> ((Int, Int), (Int, Int))
 findStart m =
@@ -71,8 +71,26 @@ part1 input =
 
 -- Part 2
 
+-- brute force should be about 200 seconds, not ideal but i'm tired
+isLoop : Int -> Bool -> ((Int, Int), (Int, Int)) -> ((Int, Int), (Int, Int)) -> SortedMap (Int, Int) Char -> Bool
+isLoop 10000 _ _ _ _ = True -- this should always terminate because it should identify when it's stuck in a cycle! i am confused
+isLoop iters isFirst start ((r, c), dir) m = if ((r,c),dir) == start && not isFirst then (trace "true") True else
+    let possible = {-(trace $ show (r,c)) $ -}(r, c) `s` dir in
+            case (lookup possible m) of
+                Just ch => {-(trace "obs") $ -}if ch == '#' then {-(trace $ "turning right at" ++ show (r,c)) $-} isLoop (iters + 1) False start ((r, c), (turnRight dir)) m
+                    else {-(trace $ "forward at" ++ show (r,c) ++ " " ++ show dir) $ -}{-(trace "mov") $ -}isLoop (iters + 1) False start (possible, dir) (insert (r,c) 'X' m)
+                Nothing => (trace "false") False
+
+allObstacleMaps : SortedMap (Int, Int) Char -> List (SortedMap (Int, Int) Char)
+allObstacleMaps m = let openSquares = filter (\k => ((fromMaybe '*' (lookup k m)) == '.')) (keys m) in
+    map (\sq => insert sq '#' m) openSquares
+
 part2 : String -> Int
-part2 input = 2
+part2 input = 
+    let inputMap = parseString input
+        st = findStart inputMap
+        allMaps = allObstacleMaps inputMap
+        loopMaps = filter (isLoop 0 True st st) allMaps in cast (length loopMaps)
 
 public export
 solve : Fin 2 -> String -> Int
