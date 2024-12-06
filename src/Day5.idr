@@ -135,6 +135,9 @@ It's O(V + E)
 (although if you use it to sort a fully ordered set i.e. (Fin n),
 time complexity is O(n + n `choose` 2) = O(n!), since it's effectively
 sorting the directed complete graph on n vertices)
+
+this is really cool and just makes sense lol
+https://en.wikipedia.org/wiki/Topological_sorting#Kahn's_algorithm
  -}
 fix : {auto rules : List (Nat, Nat)} -> List (Page rules) -> List (Page rules)
 fix update = sort update
@@ -160,6 +163,8 @@ part2 input = case forget (splitOn "" (lines input)) of
 -- Optimized version: 27.353ms (14x speedup!!)
 -- ...because you're going from O(n^2) to whatever the std library has
 -- :upside_down:
+
+-- This can apparently be done in **linear** time https://rcoh.me/posts/linear-time-median-finding/
 
 public export
 solve : Fin 2 -> String -> Int
