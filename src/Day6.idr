@@ -103,6 +103,8 @@ part2 input =
         allMaps = allObstacleMaps inputMap
         loopMaps = filter (isLoop True st) allMaps in cast (length loopMaps)
 
+-- An optimization is to only place obstacles along the original path, cuts search space by roughly 4x
+
 public export
 solve : Fin 2 -> String -> Int
 solve 0 = part1

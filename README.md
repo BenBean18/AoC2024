@@ -131,3 +131,19 @@ deleteAt 0 (_ :: xs) = xs
 deleteAt (S k) (x :: xs) = x :: deleteAt k xs
 ```
 this implementation is so cool! would have been very helpful for Day 2 but like unwrapping a `Nat` until it hits `Z` and then removing once that happens is very cool :)
+
+### Day 5
+
+**Part 1: #6240 in 00:29:18, runtime: 8.476ms**
+
+**Part 2: #5007 in 00:44:21, runtime: initially 385.275ms then 27.353ms**
+
+Notes in source
+
+### Day 6
+
+**Part 1: #7395 in 00:38:57, runtime: 11.773ms**
+
+**Part 2: #4137 in 01:02:14 :(, runtime: 51.905s ugh i need to optimize this**
+
+Some notes in source, I'm tired
