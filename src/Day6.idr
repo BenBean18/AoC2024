@@ -9,23 +9,6 @@ import Data.SortedMap
 
 -- Part 1: runs in 11.773ms
 
-mapIndexed' : Nat -> List a -> ((Nat, a) -> b) -> List b
-mapIndexed' idx (x::xs) f = f (idx, x) :: mapIndexed' (S idx) xs f
-mapIndexed' _ [] _ = []
-
-mapIndexed : List a -> ((Nat, a) -> b) -> List b
-mapIndexed = mapIndexed' 0
-
-parseString' : Nat -> List (List Char) -> SortedMap (Int, Int) Char
-parseString' rowIdx (row :: rows) = foldl
-    (\m, ((r, c), e) => insert (r, c) e m) -- acc -> elem -> acc
-    (parseString' (S rowIdx) rows) -- acc
-    (mapIndexed row (\(idx, el) => ((((the (Integer -> Int) cast) . natToInteger) rowIdx, ((the (Integer -> Int) cast) . natToInteger) idx), el))) -- List elem
-parseString' _ [] = empty
-
-parseString : String -> SortedMap (Int, Int) Char
-parseString l = parseString' Z (map unpack (lines l))
-
 turnRight : (Int, Int) -> (Int, Int)
 -- ORDER IS (row, column) aka (y, x)
 turnRight t = if t == (-1, 0) then (0, 1) -- up -> right
@@ -64,7 +47,7 @@ numSquares m = cast (length (filter (== 'X') (values m)))
 
 part1 : String -> Int
 part1 input =
-    let inputMap = parseString input
+    let inputMap = twoDStringToMap input
         st = findStart inputMap
         result = move st inputMap
         sq = numSquares result in sq
@@ -98,7 +81,7 @@ allObstacleMaps m = let openSquares = filter (\k => ((fromMaybe '*' (lookup k m)
 
 part2 : String -> Int
 part2 input = 
-    let inputMap = parseString input
+    let inputMap = twoDStringToMap input
         st = findStart inputMap
         allMaps = allObstacleMaps inputMap
         loopMaps = filter (isLoop True st) allMaps in cast (length loopMaps)

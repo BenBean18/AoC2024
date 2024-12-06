@@ -7,7 +7,7 @@
 *.dll
 *.dylib
 
-/build
+build
 
 /lib
 

@@ -61,3 +61,17 @@ memoize' f input = do
 public export
 memoize : (Ord a) => (a -> b) -> (a -> b)
 memoize f input = runST (memoize' f input)
+
+mapIndexed : ((Nat, a) -> b) -> List a -> List b
+mapIndexed f l = map f (zip [0..(length l `minus` 1)] l)
+
+parseString' : Nat -> List (List Char) -> SortedMap (Int, Int) Char
+parseString' rowIdx (row :: rows) = foldl
+    (\m, ((r, c), e) => insert (r, c) e m) -- acc -> elem -> acc
+    (parseString' (S rowIdx) rows) -- acc
+    (mapIndexed (\(idx, el) => ((((the (Integer -> Int) cast) . natToInteger) rowIdx, ((the (Integer -> Int) cast) . natToInteger) idx), el)) row) -- List elem
+parseString' _ [] = empty
+
+public export
+twoDStringToMap : String -> SortedMap (Int, Int) Char
+twoDStringToMap l = parseString' Z (map unpack (lines l))
