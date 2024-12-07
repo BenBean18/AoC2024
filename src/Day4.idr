@@ -126,9 +126,9 @@ part2 input =
  -}
 
 public export
-solve : Fin 2 -> String -> Int
-solve 0 = part1
-solve 1 = part2
+solve : Fin 2 -> String -> IO Int
+solve 0 = pure . part1
+solve 1 = pure . part2
 
 -- visualization
 -- putStr ("\x1b" ++ "c") -- clears screen, \x1b is ANSI escape

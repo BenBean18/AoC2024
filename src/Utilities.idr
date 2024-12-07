@@ -31,7 +31,7 @@ getBytes string = map cast (unpack string)
 public export
 interface Solution where
     -- input: part and contents of input.txt, output: solution to print
-    solve : Fin 2 -> String -> Int
+    solve : Fin 2 -> String -> IO Int
 
 public export
 interface Visualization where

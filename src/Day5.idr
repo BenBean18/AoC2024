@@ -167,6 +167,6 @@ part2 input = case forget (splitOn "" (lines input)) of
 -- This can apparently be done in **linear** time https://rcoh.me/posts/linear-time-median-finding/
 
 public export
-solve : Fin 2 -> String -> Int
-solve 0 = part1
-solve 1 = part2
+solve : Fin 2 -> String -> IO Int
+solve 0 = pure . part1
+solve 1 = pure . part2

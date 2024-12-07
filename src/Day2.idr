@@ -24,7 +24,7 @@ isSafe l =  let differences = differenceList l
                     (_ :: _) =>
                         let minimum = head sortedDiffs
                             maximum = last sortedDiffs
-                            incDec = allIncreasingOrDecreasing l in {-(trace $ show incDec ++ " " ++ show minimum ++ " " ++ show maximum)-} (if (minimum >= 1 && (maximum <= 3) && incDec) then 1 else 0)
+                            incDec = allIncreasingOrDecreasing l in (if (minimum >= 1 && (maximum <= 3) && incDec) then 1 else 0)
                     _ => 0
 
 part1 : String -> Int
@@ -53,6 +53,6 @@ part2 input = let theLines : List (List Int) = map (map cast) (map words (lines 
         _ => 0
 
 public export
-solve : Fin 2 -> String -> Int
-solve 0 = part1
-solve 1 = part2
+solve : Fin 2 -> String -> IO Int
+solve 0 = pure . part1
+solve 1 = pure . part2

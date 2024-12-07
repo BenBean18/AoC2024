@@ -42,6 +42,6 @@ part2 input =
         counts = map (\el => (el * count b el)) a in sum counts
 
 public export
-solve : Fin 2 -> String -> Int
-solve 0 = part1
-solve 1 = part2
+solve : Fin 2 -> String -> IO Int
+solve 0 = pure . part1
+solve 1 = pure . part2

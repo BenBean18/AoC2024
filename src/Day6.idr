@@ -6,6 +6,8 @@ import Debug.Trace
 import Data.Fin
 import Utilities
 import Data.SortedMap
+import System.Concurrency
+import Data.IORef
 
 -- Part 1: runs in 11.773ms
 
@@ -79,17 +81,33 @@ allObstacleMaps : SortedMap (Int, Int) Char -> List (SortedMap (Int, Int) Char)
 allObstacleMaps m = let openSquares = filter (\k => ((fromMaybe '*' (lookup k m)) == 'X')) (keys m) in
     map (\sq => insert sq '#' m) openSquares
 
-part2 : String -> Int
-part2 input = 
+numPerThread : Nat
+numPerThread = 500
+
+part2 : String -> IO Int
+part2 input = do
     let inputMap = twoDStringToMap input
         st = findStart inputMap
         result = move st inputMap
         allMaps = allObstacleMaps result
-        loopMaps = filter (isLoop True st) allMaps in cast (length loopMaps)
+        groupedMaps = grouped numPerThread allMaps
+    m <- makeMutex
+    ref <- newIORef (the Int 0)
+    threadIDs: List ThreadID <- traverse (\maps => fork $ do
+            putStrLn "Starting thread"
+            let val = cast $ length $ filter (isLoop True st) maps
+            mutexAcquire m
+            modifyIORef ref (\current => current + val)
+            mutexRelease m
+            ) groupedMaps
+    _ <- traverse (\i => threadWait i) threadIDs
+    readIORef ref
+
+-- fork splits off a thread
 
 -- An optimization is to only place obstacles along the original path, cuts search space by roughly 4x
 
 public export
-solve : Fin 2 -> String -> Int
-solve 0 = part1
+solve : Fin 2 -> String -> IO Int
+solve 0 = pure . part1
 solve 1 = part2

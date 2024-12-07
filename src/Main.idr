@@ -33,21 +33,21 @@ runMultipleTimes (S k) f = do
     b <- runMultipleTimes k f
     pure (a :: b)
 
-bench' : (String -> Int) -> String -> IO Integer
+bench' : (String -> IO Int) -> String -> IO Integer
 bench' f input = do
     start <- clockTime Process
-    a <- pure (f input)
+    a <- f input
     end <- clockTime Process
     pure (nanoseconds (timeDifference end start) `div` 1_000)
 
-bench : (String -> Int) -> String -> IO ()
+bench : (String -> IO Int) -> String -> IO ()
 bench f input = do
     runtimes <- runMultipleTimes 100 (bench' f input)
     putStr $ show (sum runtimes `div` 100) ++ "us"
 
-runPart : (String -> Int) -> String -> IO ()
+runPart : (String -> IO Int) -> String -> IO ()
 runPart f input = do
-    let soln = f input
+    soln <- f input
     putStr $ show soln
 
 main : IO ()
