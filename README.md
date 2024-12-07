@@ -147,3 +147,17 @@ Notes in source
 **Part 2: #4137 in 01:02:14 :(, runtime: 51.905s ugh i need to optimize this**
 
 Some notes in source, I'm tired
+
+### Day 7
+
+**Part 1: #2632 in 00:14:54, runtime: 6.454ms**
+
+**Part 2: #1790 in 00:16:51 (first on NCSSM leaderboard!), runtime: 1.107s (after optimization)**
+
+This went pretty well :)
+
+Parsing was the most annoying part (proving to Idris that the list was `NonEmpty` so I could `init` the first word)
+
+I also wrote a function definition with `::` instead of `:` (Haskell moment) and spent a few minutes confused why it wouldn't compile, womp womp
+
+I'm about to go to sleep, but there are more notes in the source

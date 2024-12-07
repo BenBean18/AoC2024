@@ -8,10 +8,6 @@ import Utilities
 
 -- Part 1: 6454us
 
--- twoDStringToMap : String -> SortedMap (Int, Int) Char
-
--- 3267: 81 40 27
-
 parseLine : String -> (Int, List Int)
 parseLine s = 
     case map unpack (words s) of
@@ -55,6 +51,9 @@ part2 input =
         nums = map (verify [(*),(+),concat]) parsed in sum nums
         -- 1.12 seconds with * before +, 1.24 seconds with + before *
         -- we don't want to put concat first since it takes forever and should be a last resort
+
+-- Exploring parallelization for the first few levels of the tree would be cool
+-- GPU? HVM? idk but speedup will be very good
 
 public export
 solve : Fin 2 -> String -> IO Int
