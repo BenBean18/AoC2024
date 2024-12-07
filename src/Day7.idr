@@ -25,6 +25,7 @@ possibleOutcomes : List Int -> List Int
 possibleOutcomes (a :: b :: xs) = possibleOutcomes ((a + b) :: xs) ++ possibleOutcomes ((a * b) :: xs)
 possibleOutcomes a = a
 
+-- :: is not :
 verify : (Int, List Int) -> Int
 verify (a, b) = case find (==a) (possibleOutcomes b) of
     Just _ => a
@@ -37,8 +38,22 @@ part1 input =
 
 -- Part 2
 
+concat : Int -> Int -> Int
+concat a b = cast ((show a) ++ (show b))
+
+possibleOutcomes2 : List Int -> List Int
+possibleOutcomes2 (a :: b :: xs) = possibleOutcomes2 ((a + b) :: xs) ++ possibleOutcomes2 ((a * b) :: xs) ++ possibleOutcomes2 ((a `concat` b) :: xs)
+possibleOutcomes2 a = a
+
+verify2 : (Int, List Int) -> Int
+verify2 (a, b) = case find (==a) (possibleOutcomes2 b) of
+    Just _ => a
+    Nothing => 0
+
 part2 : String -> Int
-part2 input = 2
+part2 input = 
+    let parsed = map parseLine (lines input)
+        nums = map verify2 parsed in sum nums
 
 public export
 solve : Fin 2 -> String -> IO Int
