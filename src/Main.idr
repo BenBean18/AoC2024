@@ -39,7 +39,7 @@ bench' f input = do
     start <- clockTime Process
     a <- f input
     end <- clockTime Process
-    pure (nanoseconds (timeDifference end start) `div` 1_000)
+    pure ((seconds (timeDifference end start) * 1_000_000) + (nanoseconds (timeDifference end start) `div` 1_000))
 
 bench : (String -> IO Int) -> String -> IO ()
 bench f input = do
