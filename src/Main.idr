@@ -18,6 +18,7 @@ import Day4
 import Day5
 import Day6
 import Day7
+import Day8
 
 -- I was trying to do this with Data.List.index but haven't figured out proofs yet
 -- https://stackoverflow.com/questions/48995850/proving-an-index-is-within-list-bounds-given-index-1-is-within-bounds was what I was looking at
@@ -73,6 +74,7 @@ main = do
                         else if day == "5" then run (Day5.solve part) contents
                         else if day == "6" then run (Day6.solve part) contents
                         else if day == "7" then run (Day7.solve part) contents
+                        else if day == "8" then run (Day8.solve part) contents
                         else putStr "That problem doesn't exist (or I haven't solved it yet)"
                     putStrLn ""
                 Nothing => putStrLn $ "Part " ++ partStr ++ " is invalid"

@@ -75,3 +75,7 @@ parseString' _ [] = empty
 public export
 twoDStringToMap : String -> SortedMap (Int, Int) Char
 twoDStringToMap l = parseString' Z (map unpack (lines l))
+
+public export
+ne : ((l: List a) -> {auto 0 _ : NonEmpty l} -> List a) -> List a -> List a
+ne f l = f @{believe_me (NonEmpty l)} l

@@ -11,10 +11,7 @@ import Utilities
 parseLine : String -> (Int, List Int)
 parseLine s = 
     case map unpack (words s) of
-        (test :: inputs) => 
-            case test of
-                (_ :: _) => (cast (pack (init test)), map (cast . pack) inputs)
-                _ => (0, [])
+        (test :: inputs) => (cast (pack ((ne init) test)), map (cast . pack) inputs)
         _ => (0, [])
 
 verify' : List (Int -> Int -> Int) -> (Int, List Int) -> Bool
