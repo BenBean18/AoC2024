@@ -62,8 +62,9 @@ reduce : (Int,Int) -> (Int,Int)
 reduce (0,0) = (0,0) -- no div by 0
 reduce (a,b) = let g = gcd (abs a) (abs b) in ((a `div` g), (b `div` g))
 
--- I FORGOT THE RECIPROCAL WAS VALID TOO
+-- I FORGOT THE OPPOSITE WAS VALID TOO
 -- UGH
+-- e.g. (x,y) and (-x,-y) are both valid
 
 linearAntinodesOfPair : ((Int, Int),(Int, Int)) -> ((Int, Int) -> Bool)
 linearAntinodesOfPair (p1,p2) = 
