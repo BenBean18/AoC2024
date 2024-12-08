@@ -27,12 +27,9 @@ directionOf 'v' = (1,0)
 directionOf '^' = (-1,0)
 directionOf _ = (0,0)
 
-s : (Int, Int) -> (Int, Int) -> (Int, Int)
-s (a1, b1) (a2, b2) = (a1 + a2, b1 + b2)
-
 move : ((Int, Int), (Int, Int)) -> SortedMap (Int, Int) Char -> SortedMap (Int, Int) Char
 move ((r, c), dir) m =
-    let possible = (r, c) `s` dir in
+    let possible = (r, c) + dir in
             case (lookup possible m) of
                 Just ch => if ch == '#' then move ((r, c), (turnRight dir)) m
                     else move (possible, dir) (insert (r,c) 'X' m)
@@ -71,7 +68,7 @@ directionOf' _ = 'X'
 -- good news! it only took ~51 (once I fixed it)!
 isLoop : Bool -> ((Int, Int), (Int, Int)) -> SortedMap (Int, Int) Char -> Bool
 isLoop isFirst ((r, c), dir) m = if directionOf (fromMaybe '.' (lookup (r,c) m)) == dir && not isFirst then True else
-    let possible = (r, c) `s` dir in
+    let possible = (r, c) + dir in
             case (lookup possible m) of
                 Just ch => if ch == '#' then isLoop False ((r, c), (turnRight dir)) m
                     else isLoop False (possible, dir) (insert (r,c) (directionOf' dir) m)

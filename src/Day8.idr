@@ -7,30 +7,26 @@ import Data.Fin
 import Utilities
 import Data.SortedMap
 
--- Part 1
+-- Part 1: 16.908ms
 
-s : (Int, Int) -> (Int, Int) -> (Int, Int)
-s (a1, b1) (a2, b2) = (a1 + a2, b1 + b2)
-
-m : (Int, Int) -> (Int, Int) -> (Int, Int)
-m (a1, b1) (a2, b2) = (a1 - a2, b1 - b2)
-
-antinodesOf' : ((Int, Int),(Int, Int)) -> List (Int, Int)
-antinodesOf' (p1,p2) = 
-    let dif = p2 `m` p1 in [p2 `s` dif, p1 `m` dif]
+antinodesOfPair : ((Int, Int),(Int, Int)) -> List (Int, Int)
+antinodesOfPair (p1,p2) = 
+    let dif = p2 + p1 in [p2 - dif, p1 - dif]
 
 -- [1,2,3,4] --> [1,(2,3,4)], [2,(3,4)], [3,4]
 
 pairs : Ord a => List a -> List (a,a)
-pairs (x :: xs) = map (\i => ((min x i), (max x i))) xs ++ pairs xs
+pairs (x :: xs) = map (\i => (x,i)) xs ++ pairs xs
 pairs _ = []
 
-antinodesOf : List (Int, Int) -> List (Int, Int)
-antinodesOf l = 
-    let p = pairs l in concatMap antinodesOf' p
+-- would be cool to write this as a vect and verify output length is n `choose` 2
 
-findAntennas : SortedMap (Int, Int) Char -> SortedMap Char (List (Int, Int))
-findAntennas m =
+antinodesOfResonantAntennas : List (Int, Int) -> List (Int, Int)
+antinodesOfResonantAntennas l = 
+    let antennaPairs = pairs l in concatMap antinodesOfPair antennaPairs
+
+findResonantAntennaGroups : SortedMap (Int, Int) Char -> SortedMap Char (List (Int, Int))
+findResonantAntennaGroups m =
     let uniqueValues = filter (/= '.') $ nub $ values m
         listVersion : List ((Int, Int), Char) = toList m in fromList $ map (\v => (v, map fst $ filter (\(k1,v1) => v1 == v) listVersion)) uniqueValues
 
@@ -38,27 +34,23 @@ findAntennas m =
 -- elem (x :: xs) b = if x == b then True else elem xs b
 -- elem [] _ = False
 
-findAntinodes : SortedMap (Int, Int) Char -> List (Int, Int)
-findAntinodes m =
-    let antennas = findAntennas m
-        antinodes = concatMap antinodesOf antennas
-        mapLocations = keys m in filter (\l => l `elem` antinodes) mapLocations
+{-
+stdlib is much cleaner lol
+elemBy : Foldable t => (a -> a -> Bool) -> a -> t a -> Bool
+elemBy p e = any (p e)
+ -}
+
+findAllAntinodes : SortedMap (Int, Int) Char -> List (Int, Int)
+findAllAntinodes m =
+    let resonantAntennaGroups = findResonantAntennaGroups m
+        allAntinodes = concatMap antinodesOfResonantAntennas resonantAntennaGroups
+        locationsInMap = keys m in filter (\l => l `elem` allAntinodes) locationsInMap
 
 part1 : String -> Int
 part1 input =
-    let m = twoDStringToMap input in cast $ length (findAntinodes m)
+    let m = twoDStringToMap input in cast $ length (findAllAntinodes m)
 
--- Part 2
-
--- allAntennas : SortedMap (Int, Int) Char -> List (Int, Int)
--- allAntennas m =
---     let antennas = map (\(a,b)=>a) $ filter (\(k,v) => v /= '.') $ (Data.SortedMap.toList m) in antennas
-
--- findAntinodes2 : SortedMap (Int, Int) Char -> List (Int, Int)
--- findAntinodes2 m =
---     let antennas = allAntennas m
---         antinodes = concatMap antinodesOf [antennas]
---         mapLocations = keys m in filter (\l => l `elem` antinodes) mapLocations
+-- Part 2: 313.331ms
 
 -- https://stackoverflow.com/a/7922967
 -- Euclidean algorithm
@@ -73,23 +65,23 @@ reduce (a,b) = let g = gcd (abs a) (abs b) in ((a `div` g), (b `div` g))
 -- I FORGOT THE RECIPROCAL WAS VALID TOO
 -- UGH
 
-antinodesOf2' : ((Int, Int),(Int, Int)) -> ((Int, Int) -> Bool)
-antinodesOf2' (p1,p2) = 
-    let dif = p2 `m` p1 in (\(a,b) => reduce dif == reduce ((a,b) `m` p1) || ((0,0) `m` (reduce dif)) == reduce ((a,b) `m` p1) || reduce ((a,b) `m` p1) == (0,0))
+linearAntinodesOfPair : ((Int, Int),(Int, Int)) -> ((Int, Int) -> Bool)
+linearAntinodesOfPair (p1,p2) = 
+    let dif = p2 - p1 in (\(a,b) => reduce dif == reduce ((a,b) - p1) || ((0,0) - (reduce dif)) == reduce ((a,b) - p1) || reduce ((a,b) - p1) == (0,0))
 
-countAntinodesOf2 : List (Int, Int) -> List (Int, Int) -> List (Int, Int)
-countAntinodesOf2 allLocations as = 
+linearAntinodesOfResonantAntennas : List (Int, Int) -> List (Int, Int) -> List (Int, Int)
+linearAntinodesOfResonantAntennas allLocations as = 
     let p = pairs as
-        checker : (Int, Int) -> Bool = (\loc => any (\t => antinodesOf2' t loc) p) in filter checker allLocations
+        checker : (Int, Int) -> Bool = (\loc => any (\t => linearAntinodesOfPair t loc) p) in filter checker allLocations
 
-countAllAntinodes2 : SortedMap (Int, Int) Char -> Int
-countAllAntinodes2 m =
-    let antennas = findAntennas m
-        antinodes = nub $ concatMap (countAntinodesOf2 (keys m)) antennas in (trace $ show (findAntennas m) ++ "\n" ++ show antinodes) cast $ length $ antinodes
+countAllLinearAntinodes : SortedMap (Int, Int) Char -> Int
+countAllLinearAntinodes m =
+    let resonantAntennaGroups = findResonantAntennaGroups m
+        allAntinodes = nub $ concatMap (linearAntinodesOfResonantAntennas (keys m)) resonantAntennaGroups in cast $ length $ allAntinodes
 
 part2 : String -> Int
 part2 input =
-    let m = twoDStringToMap input in countAllAntinodes2 m
+    let m = twoDStringToMap input in countAllLinearAntinodes m
 
 public export
 solve : Fin 2 -> String -> IO Int

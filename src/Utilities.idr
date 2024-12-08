@@ -73,6 +73,22 @@ parseString' rowIdx (row :: rows) = foldl
 parseString' _ [] = empty
 
 public export
+(+) : (Int, Int) -> (Int, Int) -> (Int, Int)
+(+) (a1, b1) (a2, b2) = (a1 + a2, b1 + b2)
+
+public export
+(-) : (Int, Int) -> (Int, Int) -> (Int, Int)
+(-) (a1, b1) (a2, b2) = (a1 - a2, b1 - b2)
+
+public export
+(*) : (Int, Int) -> (Int, Int) -> (Int, Int)
+(*) (a1, b1) (a2, b2) = (a1 * a2, b1 * b2)
+
+public export
+div : (Int, Int) -> (Int, Int) -> (Int, Int)
+div (a1, b1) (a2, b2) = (a1 `div` a2, b1 `div` b2)
+
+public export
 twoDStringToMap : String -> SortedMap (Int, Int) Char
 twoDStringToMap l = parseString' Z (map unpack (lines l))
 
