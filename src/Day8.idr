@@ -50,8 +50,46 @@ part1 input =
 
 -- Part 2
 
+-- allAntennas : SortedMap (Int, Int) Char -> List (Int, Int)
+-- allAntennas m =
+--     let antennas = map (\(a,b)=>a) $ filter (\(k,v) => v /= '.') $ (Data.SortedMap.toList m) in antennas
+
+-- findAntinodes2 : SortedMap (Int, Int) Char -> List (Int, Int)
+-- findAntinodes2 m =
+--     let antennas = allAntennas m
+--         antinodes = concatMap antinodesOf [antennas]
+--         mapLocations = keys m in filter (\l => l `elem` antinodes) mapLocations
+
+-- https://stackoverflow.com/a/7922967
+-- Euclidean algorithm
+gcd : Int -> Int -> Int
+gcd a 0 = a
+gcd a b = gcd b (a `mod` b)
+
+reduce : (Int,Int) -> (Int,Int)
+reduce (0,0) = (0,0) -- no div by 0
+reduce (a,b) = let g = gcd (abs a) (abs b) in ((a `div` g), (b `div` g))
+
+-- I FORGOT THE RECIPROCAL WAS VALID TOO
+-- UGH
+
+antinodesOf2' : ((Int, Int),(Int, Int)) -> ((Int, Int) -> Bool)
+antinodesOf2' (p1,p2) = 
+    let dif = p2 `m` p1 in (\(a,b) => reduce dif == reduce ((a,b) `m` p1) || ((0,0) `m` (reduce dif)) == reduce ((a,b) `m` p1) || reduce ((a,b) `m` p1) == (0,0))
+
+countAntinodesOf2 : List (Int, Int) -> List (Int, Int) -> List (Int, Int)
+countAntinodesOf2 allLocations as = 
+    let p = pairs as
+        checker : (Int, Int) -> Bool = (\loc => any (\t => antinodesOf2' t loc) p) in filter checker allLocations
+
+countAllAntinodes2 : SortedMap (Int, Int) Char -> Int
+countAllAntinodes2 m =
+    let antennas = findAntennas m
+        antinodes = nub $ concatMap (countAntinodesOf2 (keys m)) antennas in (trace $ show (findAntennas m) ++ "\n" ++ show antinodes) cast $ length $ antinodes
+
 part2 : String -> Int
-part2 input = 2
+part2 input =
+    let m = twoDStringToMap input in countAllAntinodes2 m
 
 public export
 solve : Fin 2 -> String -> IO Int
