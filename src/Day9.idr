@@ -135,6 +135,9 @@ putInSpace [] _ _ = []
 -- Potential optimization: once a block doesn't fit, don't keep trying to fit it
 -- These add up, I can see the runtime getting slower over time
 
+combineEmpty : DiskEntry2 -> DiskEntry2 -> DiskEntry2
+combineEmpty (Empty2 a) (Empty2 b) = Empty2 (a + b)
+combineEmpty _ _ = Empty2 0
 
 removeTrailing : Disk2 -> (Disk2, Disk2)
 removeTrailing dsk = let    splitBlock = filter (\a => case a of
@@ -142,8 +145,10 @@ removeTrailing dsk = let    splitBlock = filter (\a => case a of
                                                 (Empty2 _) => False) dsk
                             lastBlock = last @{believe_me (NonEmpty splitBlock)} splitBlock
                             splitEmpties = forget (split (\a => a == lastBlock) dsk)
+                            empties: Disk2 = (last @{believe_me (NonEmpty splitEmpties)} splitEmpties)
+                            combined: DiskEntry2 = foldl combineEmpty (Empty2 0) empties
                             
-                          in ((concat (init @{believe_me (NonEmpty splitEmpties)} splitEmpties)) ++ [lastBlock], (last @{believe_me (NonEmpty splitEmpties)} splitEmpties))
+                          in ((concat (init @{believe_me (NonEmpty splitEmpties)} splitEmpties)) ++ [lastBlock] ++ [combined], (last @{believe_me (NonEmpty splitEmpties)} splitEmpties))
 
 
 -- move last empty into first free
@@ -161,7 +166,7 @@ fillSpace2' (dsk',maxUsefulID) f = let dsk: Disk2 = if f then (fst $ removeTrail
                         (trace $ "Couldn't move " ++ show blkId ++ " " ++ show len) $ 
                         -- could NOT move the block
                         -- set maximum usable id to the ID of this block
-                        let (l, i) = fillSpace2' (init (a::bs),blkId) False in (l ++ [lastOne] ++ (if f then (snd $ removeTrailing dsk') else []), i) -- this was maxUsefulID instead of blkId which was wrong
+                        let (l, i) = fillSpace2' (init (a::bs),blkId) False in (l ++ [lastOne] ++ [], i) -- this was maxUsefulID instead of blkId which was wrong
                         -- we only want to reset id when we can't move something
                     [] => ([],maxUsefulID)
             Empty2 _ => let (l, i) = fillSpace2' (init (a::bs),maxUsefulID) False in (l ++ [lastOne], i)
@@ -198,6 +203,8 @@ trim (dsk,maxUsefulID) = --(trace $ "trim " ++ show dsk ++ " " ++ show maxUseful
 
 -- 9736426581287 too high
 -- 6325313007183 is too low
+-- 6327174563252 LETS F***ING GOOOOOOO
+-- right before I was going to go to bed I realized combining trailing whitespace is always valid
 
 -- the problem is fillSpace2' needs to keep searching further and further to find the first place to be effective
 -- but we can't always remove trailing whitespace since it's recursive, so we can only remove trailing whitespace when...
