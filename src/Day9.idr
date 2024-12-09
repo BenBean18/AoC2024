@@ -80,6 +80,77 @@ part1 input = let parsed = (parseDisk (unpack input)) in
 
 -- Part 2
 
+-- Block Id Length, Empty Length
+data DiskEntry2 = Block2 Int Int | Empty2 Int
+
+Disk2 : Type
+Disk2 = List DiskEntry2
+
+parseDisk2' : List Char -> Int -> Disk2
+parseDisk2' (fileSize :: emptySize :: xs) i = [Block2 i (cast (cast fileSize `minus` (cast '0')))] ++ (if (cast (cast emptySize `minus` (cast '0'))) > 0 then [Empty2 (cast (cast emptySize `minus` (cast '0')))] else []) ++ parseDisk2' xs (i+1)
+parseDisk2' (fileSize :: []) i = [Block2 i (cast (cast fileSize `minus` (cast '0')))]
+parseDisk2' [] _ = []
+
+parseDisk2 : List Char -> Disk2
+parseDisk2 = (flip parseDisk2') 0
+
+emptiesOnly : Disk2 -> List Int
+emptiesOnly ((Empty2 i) :: xs) = i :: emptiesOnly xs
+emptiesOnly ((Block2 _ _) :: xs) = emptiesOnly xs
+emptiesOnly [] = []
+
+largestEmpty : Disk2 -> Int
+largestEmpty d = let s = sort (emptiesOnly d) in case s of
+    (_ :: _) => last s
+    _ => 0
+
+{-
+00...111...2...333.44.5555.6666.777.888899
+0099.111...2...333.44.5555.6666.777.8888..
+0099.1117772...333.44.5555.6666.....8888..
+0099.111777244.333....5555.6666.....8888..
+00992111777.44.333....5555.6666.....8888..
+ -}
+
+Show DiskEntry2 where
+    show (Block2 idx len) = pack (replicate (cast len) (cast (idx + cast '0')))
+    show (Empty2 len) = pack (replicate (cast len) '.')
+
+Eq DiskEntry2 where
+    (==) (Block2 a b) (Block2 c d) = a == c && b == d
+    (==) (Empty2 a) (Empty2 b) = a == b
+    (==) (Empty2 _) (Block2 _ _) = False
+    (==) (Block2 _ _) (Empty2 _) = False
+
+putInSpace : Disk2 -> Int -> Int -> Disk2
+putInSpace (Empty2 emptyLen :: xs) blkId len = 
+    let dif = emptyLen - len in if dif >= 0 then (trace $ "Moving " ++ show blkId ++ " " ++ show len) (Block2 blkId len) :: (if dif > 0 then (Empty2 (emptyLen - len)) :: xs else xs) else (Empty2 emptyLen) :: putInSpace xs blkId len
+putInSpace (Block2 a b :: xs) blkId len = (Block2 a b) :: putInSpace xs blkId len
+putInSpace [] _ _ = []
+
+-- move last empty into first free
+-- and subtract number from free available
+-- recurse on init
+fillSpace2 : Disk2 -> Disk2
+fillSpace2 dsk = (trace $ "in " ++ show dsk) $ case dsk of
+    (a :: bs) =>
+        let lastOne = last (a::bs) in case lastOne of
+            (Block2 blkId len) => let newDsk = putInSpace dsk blkId len in {-(trace $ "hi " ++ show newDsk) $-} case newDsk of
+                (c :: ds) => if newDsk /= dsk then init (c::ds) ++ [Empty2 len] else fillSpace2 (init (a::bs)) ++ [lastOne]
+                [] => []
+            Empty2 _ => fillSpace2 (init (a::bs)) ++ [lastOne]
+    _ => []
+
+pd : Disk2
+pd = parseDisk2' (unpack example) 0
+
+t : IO ()
+t = printLn (fillSpace2 (fillSpace2 (fillSpace2 (fillSpace2 (fillSpace2 (fillSpace2 pd))))))
+
+--  fillSpace2 (fillSpace2 (fillSpace2 (fillSpace2 (fillSpace2 (fillSpace2 pd))))))
+
+-- exit condition: largest free space block < last entry
+
 part2 : String -> Int
 part2 input = 2
 
