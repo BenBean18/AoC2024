@@ -5,6 +5,8 @@ import Data.List
 import Debug.Trace
 import Data.Fin
 import Utilities
+import Data.SnocList
+import Data.List1
 
 -- Part 1
 
@@ -124,33 +126,69 @@ Eq DiskEntry2 where
 
 putInSpace : Disk2 -> Int -> Int -> Disk2
 putInSpace (Empty2 emptyLen :: xs) blkId len = 
-    let dif = emptyLen - len in if dif >= 0 then {-(trace $ "Moving " ++ show blkId ++ " " ++ show len)-} (Block2 blkId len) :: (if dif > 0 then (Empty2 (emptyLen - len)) :: xs else xs) else (Empty2 emptyLen) :: putInSpace xs blkId len
+    let dif = emptyLen - len in if dif >= 0 then
+        {-(trace $ "Moving " ++ show blkId ++ " " ++ show len)-} (Block2 blkId len) :: (if dif > 0 then (Empty2 (emptyLen - len)) :: xs else xs)
+        else (Empty2 emptyLen) :: putInSpace xs blkId len
 putInSpace (Block2 a b :: xs) blkId len = (Block2 a b) :: putInSpace xs blkId len
 putInSpace [] _ _ = []
+
+-- Potential optimization: once a block doesn't fit, don't keep trying to fit it
+-- These add up, I can see the runtime getting slower over time
 
 -- move last empty into first free
 -- and subtract number from free available
 -- recurse on init
-fillSpace2' : Disk2 -> Disk2
-fillSpace2' dsk = case dsk of
+fillSpace2' : (Disk2, Int) -> (Disk2, Int)
+fillSpace2' (dsk,maxUsefulID) = (trace $ show maxUsefulID) $ case dsk of
     (a :: bs) =>
         let lastOne = last (a::bs) in case lastOne of
-            (Block2 blkId len) => let newDsk = putInSpace dsk blkId len in {-(trace $ "hi " ++ show newDsk) $-} case newDsk of
-                (c :: ds) => if newDsk /= dsk then init (c::ds) ++ [Empty2 len] else fillSpace2' (init (a::bs)) ++ [lastOne]
-                [] => []
-            Empty2 _ => fillSpace2' (init (a::bs)) ++ [lastOne]
-    _ => []
+            (Block2 blkId len) => if blkId < maxUsefulID then
+                let newDsk = putInSpace dsk blkId len in {-(trace $ "hi " ++ show newDsk)$-} case newDsk of
+                    (c :: ds) => if newDsk /= dsk then (init (c::ds) ++ [Empty2 len], blkId - 1) else 
+                        let (l, i) = fillSpace2' (init (a::bs),maxUsefulID) in (l ++ [lastOne], i)
+                    [] => ([],maxUsefulID)
+                else let (l, i) = fillSpace2' (init (a::bs),maxUsefulID) in (l ++ [lastOne], i)
+            Empty2 _ => let (l, i) = fillSpace2' (init (a::bs),maxUsefulID) in (l ++ [lastOne], i)
+    _ => ([],maxUsefulID)
 
 pd : Disk2
 pd = parseDisk2' (unpack example) 0
 
-fillSpace2 : Disk2 -> Disk2
-fillSpace2 dsk = let next = fillSpace2' dsk in if dsk == next then next else fillSpace2 next
+{-
+f***
+Exception: invalid memory reference.  Some debugging context lost
+Error: invalid memory reference
+()
+ -}
+
+trim : (Disk2, Int) -> (Disk2, Disk2, DiskEntry2, Int)
+trim (dsk,maxUsefulID) = let (x ::: xs) = (split (\a => case a of
+                                                (Block2 i _) => i == maxUsefulID
+                                                (Empty2 _) => False) dsk)
+                             splitBlock = filter (\a => case a of
+                                                (Block2 i _) => i == maxUsefulID
+                                                (Empty2 _) => False) dsk in 
+                                                    case xs of
+                                                        (f :: _) => 
+                                                            case splitBlock of 
+                                                                (b :: _) => (x,f,b,maxUsefulID)
+                                                                _ => (x,f,Empty2 0,maxUsefulID)
+                                                        _ => (x,[],Empty2 0,maxUsefulID)
+
+fillSpace2 : (Disk2, Int) -> (Disk2, Int)
+fillSpace2 (dsk,maxUsefulID) = let (next,also,splitBlock,newID) = trim (fillSpace2' (dsk,maxUsefulID)) in --(trace $ show (next ++ [splitBlock] ++ also)) $
+    case next of
+        (x::y) => if dsk == next then (next ++ [splitBlock] ++ also,newID) else (trace $ "ignoring " ++ show (last (x::y))) $ 
+            let (nextIterDsk, nextIterMaxID) = fillSpace2 ((init (x::y) ++ [last (x::y)]), newID) in (nextIterDsk ++ [splitBlock] ++ also, nextIterMaxID)
+        _ => ([],maxUsefulID)
 
 convertBack : Disk2 -> Disk
 convertBack ((Block2 blkId len) :: xs) = (replicate (cast len) (Block blkId)) ++ convertBack xs
 convertBack ((Empty2 len) :: xs) = (replicate (cast len) Empty) ++ convertBack xs
 convertBack [] = []
+
+t : IO ()
+t = printLn (checksum (convertBack (fst $ fillSpace2 (pd,100000))))
 
 --  fillSpace2 (fillSpace2 (fillSpace2 (fillSpace2 (fillSpace2 (fillSpace2 pd))))))
 
@@ -159,7 +197,7 @@ convertBack [] = []
 part2 : String -> Int
 part2 input = let parsed = (parseDisk2' (unpack input) 0) in
     case parsed of
-        (_ :: _) => checksum (convertBack (fillSpace2 parsed))
+        (_ :: _) => checksum (convertBack (fst $ fillSpace2 (parsed, 100000)))
         _ => 0
 
 public export
