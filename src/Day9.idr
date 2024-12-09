@@ -124,35 +124,43 @@ Eq DiskEntry2 where
 
 putInSpace : Disk2 -> Int -> Int -> Disk2
 putInSpace (Empty2 emptyLen :: xs) blkId len = 
-    let dif = emptyLen - len in if dif >= 0 then (trace $ "Moving " ++ show blkId ++ " " ++ show len) (Block2 blkId len) :: (if dif > 0 then (Empty2 (emptyLen - len)) :: xs else xs) else (Empty2 emptyLen) :: putInSpace xs blkId len
+    let dif = emptyLen - len in if dif >= 0 then {-(trace $ "Moving " ++ show blkId ++ " " ++ show len)-} (Block2 blkId len) :: (if dif > 0 then (Empty2 (emptyLen - len)) :: xs else xs) else (Empty2 emptyLen) :: putInSpace xs blkId len
 putInSpace (Block2 a b :: xs) blkId len = (Block2 a b) :: putInSpace xs blkId len
 putInSpace [] _ _ = []
 
 -- move last empty into first free
 -- and subtract number from free available
 -- recurse on init
-fillSpace2 : Disk2 -> Disk2
-fillSpace2 dsk = (trace $ "in " ++ show dsk) $ case dsk of
+fillSpace2' : Disk2 -> Disk2
+fillSpace2' dsk = case dsk of
     (a :: bs) =>
         let lastOne = last (a::bs) in case lastOne of
             (Block2 blkId len) => let newDsk = putInSpace dsk blkId len in {-(trace $ "hi " ++ show newDsk) $-} case newDsk of
-                (c :: ds) => if newDsk /= dsk then init (c::ds) ++ [Empty2 len] else fillSpace2 (init (a::bs)) ++ [lastOne]
+                (c :: ds) => if newDsk /= dsk then init (c::ds) ++ [Empty2 len] else fillSpace2' (init (a::bs)) ++ [lastOne]
                 [] => []
-            Empty2 _ => fillSpace2 (init (a::bs)) ++ [lastOne]
+            Empty2 _ => fillSpace2' (init (a::bs)) ++ [lastOne]
     _ => []
 
 pd : Disk2
 pd = parseDisk2' (unpack example) 0
 
-t : IO ()
-t = printLn (fillSpace2 (fillSpace2 (fillSpace2 (fillSpace2 (fillSpace2 (fillSpace2 pd))))))
+fillSpace2 : Disk2 -> Disk2
+fillSpace2 dsk = let next = fillSpace2' dsk in if dsk == next then next else fillSpace2 next
+
+convertBack : Disk2 -> Disk
+convertBack ((Block2 blkId len) :: xs) = (replicate (cast len) (Block blkId)) ++ convertBack xs
+convertBack ((Empty2 len) :: xs) = (replicate (cast len) Empty) ++ convertBack xs
+convertBack [] = []
 
 --  fillSpace2 (fillSpace2 (fillSpace2 (fillSpace2 (fillSpace2 (fillSpace2 pd))))))
 
 -- exit condition: largest free space block < last entry
 
 part2 : String -> Int
-part2 input = 2
+part2 input = let parsed = (parseDisk2' (unpack input) 0) in
+    case parsed of
+        (_ :: _) => checksum (convertBack (fillSpace2 parsed))
+        _ => 0
 
 public export
 solve : Fin 2 -> String -> IO Int
