@@ -49,8 +49,18 @@ part1 input =
 
 -- Part 2
 
+-- now we care about keeping track of every path, add it to the list when we hit a nine
+bfsTracing' : SortedMap (Int, Int) Char -> List ((Int, Int), Char) -> ((Int, Int), Char) -> List (List ((Int, Int), Char))
+bfsTracing' m visited (pos,char) =
+    let neighs = neighbors m pos
+        validNeighbors = filter (\(k,v) => (the (Char -> Int) cast) v == (1 + (the (Char -> Int) cast) char)) neighs in
+            nub (if char == '9' then [visited] else []) ++ concatMap (bfsTracing' m ((pos,char) :: visited)) validNeighbors
+
 part2 : String -> Int
-part2 input = 2
+part2 input =
+    let m = twoDStringToMap input
+        starts = findStarts m
+        paths = concatMap (bfsTracing' m []) starts in cast $ length paths
 
 public export
 solve : Fin 2 -> String -> IO Int
