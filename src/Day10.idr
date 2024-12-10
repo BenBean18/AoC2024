@@ -8,7 +8,7 @@ import Utilities
 import Data.SortedMap
 import Data.SortedSet
 
--- Part 1
+-- Part 1: 4708us
 
 -- For all practical purposes, this means that a hiking trail is any path that starts at height 0, ends at height 9, and always increases by a height of exactly 1 at each step. 
 -- Hiking trails never include diagonal steps - only up, down, left, or right (from the perspective of the map).
@@ -18,12 +18,18 @@ import Data.SortedSet
 neighbors' : (Int, Int) -> List (Int, Int)
 neighbors' j = map (Utilities.(+) j) [(0,1),(0,-1),(1,0),(-1,0)]
 
+-- BOOM
+-- I realized iterating through the entire map every time is very inefficient (436194us)
+-- Old version:
+-- let pos = neighbors' c
+--     listForm = toList m in filter (\(k,v) => k `elem` pos) listForm
+
+-- So I changed it to a lookup (which, y'know, is kinda what maps are for) and got 4708us
+-- That's a 100x speedup
 neighbors : SortedMap (Int, Int) Char -> (Int, Int) -> List ((Int, Int), Char)
 neighbors m c =
-    let pos = neighbors' c
-        listForm = toList m in filter (\(k,v) => k `elem` pos) listForm
+    let pos = neighbors' c in map (\(a,b) => (a, fromMaybe '0' b)) $ filter (isJust . snd) $ map (\k => (k, lookup k m)) pos
 
--- set for optimization maybe instead of visited list
 bfs : SortedMap (Int, Int) Char -> ((Int, Int), Char) -> List ((Int, Int), Char)
 bfs m (pos,char) =
     let neighs = neighbors m pos
@@ -47,7 +53,7 @@ part1 input =
         starts = findStarts m
         nines = concatMap (ninesReachable m) starts in cast $ length nines
 
--- Part 2
+-- Part 2: 4840us
 
 -- now we care about keeping track of every path, add it to the list when we hit a nine
 bfsTracing' : SortedMap (Int, Int) Char -> List ((Int, Int), Char) -> ((Int, Int), Char) -> List (List ((Int, Int), Char))
