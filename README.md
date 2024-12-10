@@ -161,3 +161,33 @@ Parsing was the most annoying part (proving to Idris that the list was `NonEmpty
 I also wrote a function definition with `::` instead of `:` (Haskell moment) and spent a few minutes confused why it wouldn't compile, womp womp
 
 I'm about to go to sleep, but there are more notes in the source
+
+### Day 8
+
+**Part 1: #3904 in 00:28:19, runtime: 16.908ms**
+
+**Part 2: #5860 in 01:01:41, runtime: 313.331ms**
+
+Commentary in source
+
+### Day 9
+
+**Part 1: #2866 in 00:25:00, runtime: 34.1s**
+
+**Part 2: #9307 in 03:39:36..., runtime (with printouts): 9.552s**
+
+this one was annoying and led to sleep deprivation
+
+when I was testing Part 2, I realized it was getting slower as more blocks were being removed, and eventually tracked it down to tons of noncontiguous whitespace blocks at the end that it has to iterate through every time (and the number of blocks kept increasing).
+
+right when I was about to go to sleep I realized I could compress trailing whitespace into one contiguous block instead of deleting it (which has issues when recursing, since trailing is not always at the end of the whole thing), so then spent ~10min fixing it
+
+### Day 10
+
+**Part 1: #1486 in 00:12:18, runtime: 4.708ms**
+
+**Part 2: #1962 in 00:19:11, runtime: 4.840ms**
+
+Turns out a map lookup is MUCH more efficient (100x speedup) than looking through **every pair**...maybe coding for speed has its drawbacks sometimes. That optimization felt really good.
+
+Also, when you copy a recursive function for Part 2, make sure you change the name of the recursive call :upside_down:
