@@ -191,3 +191,61 @@ right when I was about to go to sleep I realized I could compress trailing white
 Turns out a map lookup is MUCH more efficient (100x speedup) than looking through **every pair**...maybe coding for speed has its drawbacks sometimes. That optimization felt really good.
 
 Also, when you copy a recursive function for Part 2, make sure you change the name of the recursive call :upside_down:
+
+### Day 11
+
+**Part 1: #3388 in 00:13:01, runtime: ~90s -> 2.453ms**
+
+(cue suspenseful music)
+
+"split in two"
+
+"multiplied by 2024"
+
+"55312 stones"
+
+"run 25 times"
+
+So... this sounds like 2021 lanternfish, not easily brute forceable (or possibly brute forceable for part 1, but not for part 2). I was discussing this with another 4W person working on AoC, and we decided to just YOLO it and try; Part 1 might be brute forceable. It was, but my solution took 90 seconds to run, and I was furiously googling number theory-related questions like "factors of 2024" and "theorems about numbers of digits in base 10 representation of number under multiplication," etc.
+
+**Part 2: #6428 in 01:28:36, runtime: 101.591ms**
+
+Now for the interesting part. I immediately recognized that the order of the stones didn't matter, and we only cared about how many there were. I was wrong about my second assumption: "The specific number doesn't matter either, unless it's zero," see the next sentence. I thought I could potentially just store the number of stones with zero, even number of digits, or odd number of digits, but that doesn't work because different starting configurations that have the same number of digits result in different values. I tried to fit an exponential to the number of stones using Desmos, but the fit wasn't perfect (and it would need to be). I noticed that there was no specific example output for Part 2, so thought I might need a specific property of my input. I was down the rabbit hole of number theory, a field which I don't really do much in.
+
+Then, the person who I was working with mentioned that there are only a small number of unique numbers and memoization could be possible. I was a bit doubtful, but tried using the `memoize` function I had written...which didn't work, I'm still not sure why. I tried to debug it more and mess around with the `ST` monad, but then I realized something: this **is** the lanternfish problem.
+
+The canonical (I think) way to solve that problem was to represent the number of exponentially growing lanternfish in each of the eight states as a value in a map where the key is the state. This logic can be applied to this problem as well; we can store the number of stones with a specific number in a `SortedMap Int Int`, where the key is the number on the stone and the value is the number of occurrences of that stone (not the other way around...oops...caught this when checking my parsing using this method, all of the keys were 1 so they overwrote each other and I only got the last number).
+
+So, I could port my Part 1 code (returns the list of stones from an original stone) to Part 2 relatively easily*: I'd just form a list of tuples `(stone number, occurrences)` and convert it into a `SortedMap` using `fromList`. This sounds great, but didn't work for 25 steps -- it was ~5000 low (but it was FAST). However, it did work for 6 steps.
+
+I noticed that Eric had done something mean with choosing iterations 1-6 to include in the example: 7 is the first iteration that relies on a previous iteration with duplicate stones. I thought my problem likely had something to do with not handling stones with a "multiplier" (number of occurrences) of greater than 1 correctly.
+
+So, I tried starting with the stones `0 0`, which resulted in the BEAUTIFUL `SortedMap` `fromList [(0,1)]`. Huh? That should be `fromList [(0,2)]`. Or...it confirms my suspicions.
+
+I was parsing the input like this:
+```idris
+(fromList (map (,1) (map cast (words input))))
+```
+
+and...well... that gives us `fromList [(0,1),(0,1)]`
+
+where the second key overwrites the first key and we get `fromList [(0,1)]`.
+
+This was the **exact** same way I was creating a `SortedMap` out of the newly created stones:
+```idris
+nextStone' : Int -> Int -> SortedMap Int Int
+nextStone' multiplier i =
+    let int : List (Int, Int) = map (,multiplier) (nextStone i) in fromList int
+```
+
+So, it had the same issue: duplicate stones would be counted as one. **womp womp**
+
+This is the correct implementation:
+```idris
+nextStone' : Int -> Int -> SortedMap Int Int
+nextStone' multiplier i = foldl (mergeWith (+)) empty (map (\a => fromList [(a,multiplier)]) (nextStone i))
+```
+
+It combines a ton of maps with one element (just remembered `singleton` exists) together with `mergeWith (+)`, and works great.
+
+I just cleaned up my code, and it looks REALLY nice now.
