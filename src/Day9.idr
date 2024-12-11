@@ -160,10 +160,10 @@ fillSpace2' (dsk',maxUsefulID) f = let dsk: Disk2 = if f then (fst $ removeTrail
         let lastOne = last (a::bs) in case lastOne of
             (Block2 blkId len) => let newDsk = putInSpace dsk blkId len in {-(trace $ "hi " ++ show newDsk)$-} case newDsk of
                     (c :: ds) => if newDsk /= dsk then 
-                        (trace $ "Moved " ++ show blkId ++ " " ++ show len ++ ", ignoring >=" ++ show maxUsefulID) $ 
+                        --(trace $ "Moved " ++ show blkId ++ " " ++ show len ++ ", ignoring >=" ++ show maxUsefulID) $ 
                         (init (c::ds) ++ [Empty2 len], maxUsefulID) -- could move the block, we're good, it is NOT immovable, continue on (this was blkId-1 which was wrong)
                         else
-                        (trace $ "Couldn't move " ++ show blkId ++ " " ++ show len) $ 
+                        --(trace $ "Couldn't move " ++ show blkId ++ " " ++ show len) $ 
                         -- could NOT move the block
                         -- set maximum usable id to the ID of this block
                         let (l, i) = fillSpace2' (init (a::bs),blkId) False in (l ++ [lastOne] ++ [], i) -- this was maxUsefulID instead of blkId which was wrong
@@ -211,7 +211,7 @@ trim (dsk,maxUsefulID) = --(trace $ "trim " ++ show dsk ++ " " ++ show maxUseful
 -- it's the first time calling fillSpace2' i think?
 
 fillSpace2 : (Disk2, Int) -> (Disk2, Int)
-fillSpace2 (dsk,maxUsefulID) = (trace $ "l" ++ show (length dsk)) $
+fillSpace2 (dsk,maxUsefulID) = --(trace $ "l" ++ show (length dsk)) $
     let (next,also,splitBlock,newID) = trim (fillSpace2' (dsk,maxUsefulID) True) in  --(trace $ show dsk ++ "->" ++ show next ++ " " ++ show splitBlock ++ " " ++ show also) $
     case next of
         (x::y) => if dsk == next then (next ++ splitBlock ++ also,newID) else --(trace $ "ignoring " ++ show (last (x::y))) $ 
@@ -233,9 +233,13 @@ t = printLn (checksum (convertBack (fst $ fillSpace2 (pd,1000000))))
 part2 : String -> Int
 part2 input = let parsed = (parseDisk2' (unpack input) 0)
                   theEnd = (fst $ fillSpace2 (parsed, 100000)) in
-    (trace $ show theEnd) $ case parsed of
+    {-(trace $ show theEnd) $ -}case parsed of
         (_ :: _) => checksum (convertBack theEnd)
         _ => 0
+
+-- Two pointer strategy: 
+-- - store last filled space position and start searching left to right there
+-- - store last moved block and start searching right to left there (I'm kinda doing this now by combining trailing whitespace)
 
 public export
 solve : Fin 2 -> String -> IO Int

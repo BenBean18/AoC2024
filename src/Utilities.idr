@@ -93,5 +93,14 @@ twoDStringToMap : String -> SortedMap (Int, Int) Char
 twoDStringToMap l = parseString' Z (map unpack (lines l))
 
 public export
-ne : ((l: List a) -> {auto 0 _ : NonEmpty l} -> List a) -> List a -> List a
+ne : ((l: List a) -> {auto 0 _ : NonEmpty l} -> b) -> List a -> b
 ne f l = f @{believe_me (NonEmpty l)} l
+
+-- Mainly a template to modify for visualizations
+public export
+render2DMap : SortedMap (Int, Int) Char -> String
+render2DMap m =
+    let s = sort (keys m)
+        (maxY, maxX) = ne last s
+        (minY, minX) = ne head s
+        toRender = map (\y => pack $ map (\x => (fromMaybe ' ') (lookup (cast y,cast x) m)) [minX..maxX]) [minY..maxY] in unlines toRender

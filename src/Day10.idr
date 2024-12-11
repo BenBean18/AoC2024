@@ -7,6 +7,7 @@ import Data.Fin
 import Utilities
 import Data.SortedMap
 import Data.SortedSet
+import System
 
 -- Part 1: 4708us
 
@@ -55,20 +56,35 @@ part1 input =
 
 -- Part 2: 4840us
 
+highlight : List Char -> List Char
+highlight s = unpack ("\x1b" ++ "[43m" ++ (pack s) ++ "\x1b" ++ "[0m")
+
+renderPath : SortedMap (Int, Int) Char -> List ((Int, Int), Char) -> String
+renderPath m path = "\x1b" ++ "c" ++
+    let s = sort (keys m)
+        (maxY, maxX) = ne last s
+        (minY, minX) = ne head s
+        toRender = map (\y => pack $ concatMap (\x => 
+            let str: List Char = [(fromMaybe ' ') (lookup (cast y,cast x) m)] in
+                if (y,x) `elem` (map fst path) then highlight str else str) [minX..maxX]) [minY..maxY] in unlines toRender
+
 -- now we care about keeping track of every path, add it to the list when we hit a nine
 bfsTracing' : SortedMap (Int, Int) Char -> List ((Int, Int), Char) -> ((Int, Int), Char) -> List (List ((Int, Int), Char))
-bfsTracing' m visited (pos,char) =
+bfsTracing' m visited (pos,char) = (trace $ renderPath m visited) $ unsafePerformIO (do
+    usleep 100000
     let neighs = neighbors m pos
-        validNeighbors = filter (\(k,v) => (the (Char -> Int) cast) v == (1 + (the (Char -> Int) cast) char)) neighs in
-            nub (if char == '9' then [visited] else []) ++ concatMap (bfsTracing' m ((pos,char) :: visited)) validNeighbors
+    let validNeighbors = filter (\(k,v) => (the (Char -> Int) cast) v == (1 + (the (Char -> Int) cast) char)) neighs
+    pure $ nub (if char == '9' then [visited] else []) ++ concatMap (bfsTracing' m ((pos,char) :: visited)) validNeighbors)
 
-part2 : String -> Int
+part2 : String -> IO Int
 part2 input =
     let m = twoDStringToMap input
         starts = findStarts m
-        paths = concatMap (bfsTracing' m []) starts in cast $ length paths
+        paths = concatMap (bfsTracing' m []) starts in do
+            putStrLn (render2DMap m)
+            pure (cast $ length paths)
 
 public export
 solve : Fin 2 -> String -> IO Int
 solve 0 = pure . part1
-solve 1 = pure . part2
+solve 1 = part2
