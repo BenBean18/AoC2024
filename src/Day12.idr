@@ -120,15 +120,28 @@ magnitude (a,b) = a*a + b*b
 -- (-1, 0), (-1, 1), (-1, 2), (-1, 3), (-1, 4), (-1, 5), **(0, -1), (0, 6)**is a problem
 
 findLines : List (Int, Int) -> Int
-findLines (a :: b :: xs) = if magnitude (a - b) > 1 then 1 + findLines (b :: xs) else findLines (b :: xs)
+findLines (a :: b :: xs) = if magnitude (a - b) > 1 || (fst a /= fst b) || (abs (snd a - snd b) > 1) then 1 + findLines (b :: xs) else findLines (b :: xs)
 findLines [_] = 1
 findLines [] = 0
 
 listDifference : Eq a => Ord a => List a -> List a -> List a
 listDifference a b = foldl (flip delete) a b
 
-numSides : SortedSet (Int, Int) -> Int
-numSides l =
+highlight : List Char -> List Char
+highlight s = unpack ("\x1b" ++ "[43m" ++ (pack s) ++ "\x1b" ++ "[0m")
+
+renderPath : SortedMap (Int, Int) Char -> List (Int, Int) -> String
+renderPath m path = --"\x1b" ++ "c" ++
+    let s = sort (keys m)
+        (maxY, maxX) = ne last s
+        (minY, minX) = ne head s
+        toRender = map (\y => pack $ concatMap (\x => 
+            let str: List Char = [(fromMaybe ' ') (lookup (cast y,cast x) m)] in
+                if (y,x) `elem` path then highlight str else str) [minX..maxX]) [minY..maxY] in unlines toRender
+
+
+numSides : SortedMap (Int, Int) Char -> SortedSet (Int, Int) -> Int
+numSides m l =
     let boxAroundEachElement : List ((Int, Int), (Int, Int)) = concatMap (\pt => map (\neigh => (neigh,pt)) (neighbors pt)) l
         outerSides' : List ((Int, Int), (Int, Int)) = Prelude.List.filter (\(dst,src) => not (dst `elem` l)) boxAroundEachElement
         -- default sort sorts by first coordinate which is y
@@ -137,7 +150,11 @@ numSides l =
         border : List (Int, Int) = sort $ map (\(a,b)=>(b,a)) $ map (\(d,s)=>d) $ filter (\((dy,dx),(sy,sx)) => dy == sy) outerSides'
         border' = sort $ map (\(d,s)=>d) $ filter (\((dy,dx),(sy,sx)) => dx == sx) outerSides'
         lines = findLines (nub border) + findLines (listDifference border (nub border))
-        lines' = findLines (nub border') + findLines (listDifference border' (nub border')) in (trace $ "lines=" ++ show lines ++ " lines'=" ++ show lines' ++ "\n\nb=" ++ show (map (\(a,b)=>(b,a)) border) ++ "\n\nb'=" ++ show border') $ 
+        lines' = findLines (nub border') + findLines (listDifference border' (nub border')) in (trace $ "lines=" ++ show lines ++ " lines'=" ++ show lines' ++
+            "\n\nb=" ++ (show (findLines (nub border))) ++ "\n" ++ (renderPath m (map (\(a,b)=>(b,a)) border)) ++
+            "\n\ndedup=" ++ (show (findLines (listDifference border (nub border)))) ++ "\n" ++ (renderPath m (map (\(a,b)=>(b,a)) (listDifference border (nub border)))) ++
+            "\n\nb'=" ++ (show (findLines (nub border'))) ++ "\n" ++ (renderPath m border') ++
+            "\n\ndedup=" ++ (show (findLines (listDifference border' (nub border')))) ++ "\n" ++ (renderPath m (listDifference border' (nub border')))) $ 
             lines + lines' -- sorting is important
 
 regionScores2 : SortedMap (Int, Int) Char -> Int
@@ -145,13 +162,15 @@ regionScores2 m = if m == empty then 0 else
     let startingPoint = head @{believe_me (NonEmpty (keys m))} (keys m)
         region = floodFill m empty startingPoint
         a = (area region)
-        ns = (numSides region)
+        ns = (numSides m region)
         score = a * ns
         removed = foldl (flip delete) m region
         next = regionScores2 removed in -- (trace $ "*****" ++ show removed)
             (trace $ show (lookup startingPoint m) ++ " " ++ show a ++ " " ++ show ns ++ "\n") $ score + next
 
 -- 891692 too low
+
+-- https://www.reddit.com/r/adventofcode/comments/1hcfurk/2024_day_12_another_test_case/ breaks mine! I get 868
 
 part2 : String -> Int
 part2 = regionScores2 . twoDStringToMap
