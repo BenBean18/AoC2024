@@ -30,18 +30,26 @@ validNeighbors m pos =
 -- can't do a difference between maps unfortunately, would be a cool way to remove all visited nodes
 
 -- returns (visited, new map)
-floodFill : SortedMap (Int, Int) Char -> SortedSet (Int, Int) -> (Int, Int) -> List (Int, Int)
-floodFill m visited pos = if pos `contains` visited then [] else 
+floodFill : SortedMap (Int, Int) Char -> SortedSet (Int, Int) -> (Int, Int) -> SortedSet (Int, Int)
+floodFill m visited pos = {-(trace $ show pos ++ " " ++ show (lookup pos m) ++ " " ++ show visited) $ -}if pos `contains` visited then empty else 
     let c' = lookup pos m in
         case c' of 
-            Just c => let neighs = validNeighbors m pos in pos :: (concatMap (floodFill m (insert pos visited)) neighs)
-            Nothing => []
+            Just c => let neighs = validNeighbors m pos in
+                -- insert pos
+                foldl (\currentVisited, neighbor => currentVisited `union` floodFill m (insert pos currentVisited) neighbor) (insert pos visited) neighs
+            Nothing => empty
 
-area : List (Int, Int) -> Int
-area = cast . length
+area : SortedSet (Int, Int) -> Int
+area = cast . length . Data.SortedSet.toList
+
+-- 0,0 down = 1,0 up
+data Side = MkSide (Int, Int) (Int, Int)
+
+-- instance Eq Side
+--     (==) (MkSide pos dir) = 
 
 -- issue: multiple sides on same untouched point
-perimeter : List (Int, Int) -> Int
+perimeter : SortedSet (Int, Int) -> Int
 perimeter l =
     let boxAroundEachElement : List ((Int, Int), (Int, Int)) = concatMap (\pt => map (\neigh => (neigh,pt)) (neighbors pt)) l in (cast . length) $ Prelude.List.filter (\(dst,src) => not (dst `elem` l)) boxAroundEachElement
         -- allSides: SortedSet (Int, Int) = fromList boxAroundEachElement
@@ -53,10 +61,10 @@ perimeter l =
 regionScores : SortedMap (Int, Int) Char -> Int
 regionScores m = if m == empty then 0 else
     let startingPoint = head @{believe_me (NonEmpty (keys m))} (keys m)
-        region = Data.SortedSet.toList $ Data.SortedSet.fromList $ floodFill m empty startingPoint -- yes this is slow
+        region = floodFill m empty startingPoint
         score = (area region) * (perimeter region)
         removed = foldl (flip delete) m region
-        next = regionScores removed in
+        next = regionScores removed in -- (trace $ "*****" ++ show removed)
             score + next
 
 part1 : String -> Int
