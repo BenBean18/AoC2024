@@ -4,7 +4,10 @@ import Data.String
 import Data.List
 import Debug.Trace
 import Data.Fin
+import Data.Nat
 import Utilities
+import Data.SortedMap
+import Data.SortedSet
 
 -- Part 1
 
