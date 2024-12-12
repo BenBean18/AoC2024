@@ -147,15 +147,24 @@ numSides m l =
         -- default sort sorts by first coordinate which is y
         -- so we find all the sides that are vertical
         -- i.e. the dest is horizontal from the source and their vert coords are the same i think?
-        border : List (Int, Int) = sort $ map (\(a,b)=>(b,a)) $ map (\(d,s)=>d) $ filter (\((dy,dx),(sy,sx)) => dy == sy) outerSides'
-        border' = sort $ map (\(d,s)=>d) $ filter (\((dy,dx),(sy,sx)) => dx == sx) outerSides'
-        lines = findLines (nub border) + findLines (listDifference border (nub border))
-        lines' = findLines (nub border') + findLines (listDifference border' (nub border')) in (trace $ "lines=" ++ show lines ++ " lines'=" ++ show lines' ++
-            "\n\nb=" ++ (show (findLines (nub border))) ++ "\n" ++ (renderPath m (map (\(a,b)=>(b,a)) border)) ++
-            "\n\ndedup=" ++ (show (findLines (listDifference border (nub border)))) ++ "\n" ++ (renderPath m (map (\(a,b)=>(b,a)) (listDifference border (nub border)))) ++
-            "\n\nb'=" ++ (show (findLines (nub border'))) ++ "\n" ++ (renderPath m border') ++
-            "\n\ndedup=" ++ (show (findLines (listDifference border' (nub border')))) ++ "\n" ++ (renderPath m (listDifference border' (nub border')))) $ 
-            lines + lines' -- sorting is important
+
+        -- vertical: sort normally
+        -- horizontal: sort inverted
+        verticalBorderToTheLeft : List (Int, Int) = sort $ map (\(a,b)=>(b,a)) $ map (\(d,s)=>d) $ filter (\(d,s) => (d - s) == (the Int 0,the Int (-1))) outerSides'
+        verticalBorderToTheRight : List (Int, Int) = sort $ map (\(a,b)=>(b,a)) $ map (\(d,s)=>d) $ filter (\(d,s) => (d - s) == (the Int 0,the Int 1)) outerSides'
+        horizontalBorderToTheUp : List (Int, Int) = sort $ map (\(d,s)=>d) $ filter (\(d,s) => (d - s) == (the Int (-1),the Int 0)) outerSides'
+        horizontalBorderToTheDown : List (Int, Int) = sort $ map (\(d,s)=>d) $ filter (\(d,s) => (d - s) == (the Int 1,the Int 0)) outerSides'
+        -- border : List (Int, Int) = sort $ map (\(a,b)=>(b,a)) $ map (\(d,s)=>d) $ filter (\((dy,dx),(sy,sx)) => dy == sy) outerSides'
+        -- border' = sort $ map (\(d,s)=>d) $ filter (\((dy,dx),(sy,sx)) => dx == sx) outerSides'
+        -- lines = findLines (nub border) + findLines (listDifference border (nub border))
+        -- lines' = findLines (nub border') + findLines (listDifference border' (nub border')) in
+        --     (trace $ "lines=" ++ show lines ++ " lines'=" ++ show lines' ++
+        --     "\n\nb=" ++ (show (findLines (nub border))) ++ "\n" ++ (renderPath m (map (\(a,b)=>(b,a)) border)) ++
+        --     "\n\ndedup=" ++ (show (findLines (listDifference border (nub border)))) ++ "\n" ++ (renderPath m (map (\(a,b)=>(b,a)) (listDifference border (nub border)))) ++
+        --     "\n\nb'=" ++ (show (findLines (nub border'))) ++ "\n" ++ (renderPath m border') ++
+        --     "\n\ndedup=" ++ (show (findLines (listDifference border' (nub border')))) ++ "\n" ++ (renderPath m (listDifference border' (nub border')))) $ 
+        --     lines + lines' -- sorting is important
+        in sum (map findLines [verticalBorderToTheLeft,verticalBorderToTheRight,horizontalBorderToTheUp,horizontalBorderToTheDown])
 
 regionScores2 : SortedMap (Int, Int) Char -> Int
 regionScores2 m = if m == empty then 0 else
