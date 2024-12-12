@@ -120,26 +120,38 @@ magnitude (a,b) = a*a + b*b
 -- (-1, 0), (-1, 1), (-1, 2), (-1, 3), (-1, 4), (-1, 5), **(0, -1), (0, 6)**is a problem
 
 findLines : List (Int, Int) -> Int
-findLines (a :: b :: xs) = if (fst a) /= (fst b) then {-(trace $ show a ++ " " ++ show b) $ -}1 + findLines (b :: xs) else findLines (b :: xs)
-findLines _ = 1 -- only adding one during transition, so start at one
+findLines (a :: b :: xs) = if magnitude (a - b) > 1 then 1 + findLines (b :: xs) else findLines (b :: xs)
+findLines [_] = 1
+findLines [] = 0
+
+listDifference : Eq a => Ord a => List a -> List a -> List a
+listDifference a b = foldl (flip delete) a b
 
 numSides : SortedSet (Int, Int) -> Int
 numSides l =
     let boxAroundEachElement : List ((Int, Int), (Int, Int)) = concatMap (\pt => map (\neigh => (neigh,pt)) (neighbors pt)) l
         outerSides' : List ((Int, Int), (Int, Int)) = Prelude.List.filter (\(dst,src) => not (dst `elem` l)) boxAroundEachElement
-        border : List (Int, Int) = sort $ map fst outerSides'
-        border' = sort $ (map (\(a,b)=>(b,a)) border)
-        lines = findLines border
-        lines' = findLines border' in (trace $ "lines=" ++ show lines ++ "lines'=" ++ show lines' ++ "\n\nb=" ++ show border ++ "\n\nb'=") $ lines + lines' -- sorting is important
+        -- default sort sorts by first coordinate which is y
+        -- so we find all the sides that are vertical
+        -- i.e. the dest is horizontal from the source and their vert coords are the same i think?
+        border : List (Int, Int) = sort $ map (\(a,b)=>(b,a)) $ map (\(d,s)=>d) $ filter (\((dy,dx),(sy,sx)) => dy == sy) outerSides'
+        border' = sort $ map (\(d,s)=>d) $ filter (\((dy,dx),(sy,sx)) => dx == sx) outerSides'
+        lines = findLines (nub border) + findLines (listDifference border (nub border))
+        lines' = findLines (nub border') + findLines (listDifference border' (nub border')) in (trace $ "lines=" ++ show lines ++ " lines'=" ++ show lines' ++ "\n\nb=" ++ show (map (\(a,b)=>(b,a)) border) ++ "\n\nb'=" ++ show border') $ 
+            lines + lines' -- sorting is important
 
 regionScores2 : SortedMap (Int, Int) Char -> Int
 regionScores2 m = if m == empty then 0 else
     let startingPoint = head @{believe_me (NonEmpty (keys m))} (keys m)
         region = floodFill m empty startingPoint
-        score = (area region) * (numSides region)
+        a = (area region)
+        ns = (numSides region)
+        score = a * ns
         removed = foldl (flip delete) m region
-        next = regionScores removed in -- (trace $ "*****" ++ show removed)
-            score + next
+        next = regionScores2 removed in -- (trace $ "*****" ++ show removed)
+            (trace $ show (lookup startingPoint m) ++ " " ++ show a ++ " " ++ show ns ++ "\n") $ score + next
+
+-- 891692 too low
 
 part2 : String -> Int
 part2 = regionScores2 . twoDStringToMap
