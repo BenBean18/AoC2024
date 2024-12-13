@@ -137,8 +137,28 @@ part1 input =
 
 -- Part 2
 
+parseMachine2 : List String -> Maybe (Mat 2 Double, Vect 2 Double)
+parseMachine2 (a :: b :: goal :: []) =
+    let aXY = parseNums a
+        bXY = parseNums b
+        goal : List Double = map cast (parseNums goal) in 
+            case aXY of 
+                (a :: c :: []) => 
+                    case bXY of
+                        (b :: d :: []) => 
+                            let m : Mat 2 Double = ((cast a :: cast b :: []) :: (cast c :: cast d :: []) :: []) in 
+                                case goal of 
+                                    (x :: y :: []) => Just (m, (10000000000000 + cast x :: 10000000000000 + cast y :: []))
+                                    _ => Nothing
+                        _ => Nothing
+                _ => Nothing
+parseMachine2 _ = Nothing
+
 part2 : String -> Int
-part2 input = 2
+part2 input = 
+    let groups = forget $ splitOn "" (lines input)
+        machines' = filter isJust (map parseMachine2 groups)
+        machines = map (\a => fromJust @{believe_me (Just a)} a) machines' in sum (map (score . findSolution) machines)
 
 public export
 solve : Fin 2 -> String -> IO Int
