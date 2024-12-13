@@ -150,6 +150,9 @@ numSides m l =
 
         -- vertical: sort normally
         -- horizontal: sort inverted
+
+        -- i thought of this strategy while manually counting difficult cases and realized deduplication/edges on same squares could be resolved by counting
+        -- each side separately
         verticalBorderToTheLeft : List (Int, Int) = sort $ map (\(a,b)=>(b,a)) $ map (\(d,s)=>d) $ filter (\(d,s) => (d - s) == (the Int 0,the Int (-1))) outerSides'
         verticalBorderToTheRight : List (Int, Int) = sort $ map (\(a,b)=>(b,a)) $ map (\(d,s)=>d) $ filter (\(d,s) => (d - s) == (the Int 0,the Int 1)) outerSides'
         horizontalBorderToTheUp : List (Int, Int) = sort $ map (\(d,s)=>d) $ filter (\(d,s) => (d - s) == (the Int (-1),the Int 0)) outerSides'
@@ -175,7 +178,7 @@ regionScores2 m = if m == empty then 0 else
         score = a * ns
         removed = foldl (flip delete) m region
         next = regionScores2 removed in -- (trace $ "*****" ++ show removed)
-            (trace $ show (lookup startingPoint m) ++ " " ++ show a ++ " " ++ show ns ++ "\n") $ score + next
+            {-(trace $ show (lookup startingPoint m) ++ " " ++ show a ++ " " ++ show ns ++ "\n") $ -}score + next
 
 -- 891692 too low
 
