@@ -24,6 +24,7 @@ import Day10
 import Day11
 import Day12
 import Day13
+import Day14
 
 -- I was trying to do this with Data.List.index but haven't figured out proofs yet
 -- https://stackoverflow.com/questions/48995850/proving-an-index-is-within-list-bounds-given-index-1-is-within-bounds was what I was looking at
@@ -57,7 +58,7 @@ runPart f input = do
     soln <- f input
     putStr $ show soln
 
-main : IO ()
+partial main : IO ()
 main = do
     args <- getArgs
     if (length args >= 3) then
@@ -85,6 +86,7 @@ main = do
                         else if day == "11" then run (Day11.solve part) contents
                         else if day == "12" then run (Day12.solve part) contents
                         else if day == "13" then run (Day13.solve part) contents
+                        else if day == "14" then run (Day14.solve part) contents
                         else putStr "That problem doesn't exist (or I haven't solved it yet)"
                     putStrLn ""
                 Nothing => putStrLn $ "Part " ++ partStr ++ " is invalid"

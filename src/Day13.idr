@@ -55,7 +55,7 @@ inv2 : Mat 2 Double -> Maybe (Mat 2 Double)
 inv2 ((a :: b :: []) :: (c :: d :: []) :: []) =
     let det' = a*d - b*c in
         case det' of
-            0 => Nothing -- singular!
+            0 => (trace "singular") Nothing -- singular!
             det => Just (((1 / det) * d :: (1 / det) * (-b) :: []) :: ((1 / det) * (-c) :: (1 / det) * a :: []) :: [])
 
 -- -- https://stackoverflow.com/a/7922967
@@ -127,7 +127,7 @@ score : Maybe (Vect 2 Int) -> Int
 score (Just (a :: b :: [])) = 3*a + b
 score Nothing = 0
 
--- Part 1
+-- Part 1: 711us
 
 part1 : String -> Int
 part1 input = 
@@ -135,7 +135,7 @@ part1 input =
         machines' = filter isJust (map parseMachine groups)
         machines = map (\a => fromJust @{believe_me (Just a)} a) machines' in sum (map (score . findSolution) machines)
 
--- Part 2
+-- Part 2: 700us
 
 parseMachine2 : List String -> Maybe (Mat 2 Double, Vect 2 Double)
 parseMachine2 (a :: b :: goal :: []) =
