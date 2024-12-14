@@ -9,6 +9,7 @@ import Utilities
 import Data.SortedMap
 import Data.SortedSet
 import Data.List1
+import System
 
 -- Part 1
 
@@ -81,10 +82,109 @@ part1 input =
 
 -- Part 2
 
-part2 : String -> Int
-part2 input = 2
+-- If they're the same type of robots, they should have a hard-coded Easter egg: very rarely, most of the robots should arrange themselves into a picture of a Christmas tree.
+
+render2DMap' : SortedMap (Int, Int) Char -> String
+render2DMap' m =
+    let s = sort (keys m)
+        (maxY, maxX) = (103,101)
+        (minY, minX) = (0,0)
+        toRender = map (\y => pack $ map (\x => (fromMaybe ' ') (lookup (cast x,cast y) m)) [minX..maxX]) [minY..maxY] in unlines toRender
+
+renderMap : List (Int, Int) -> String
+renderMap l = render2DMap' (fromList (map (,'#') l))
+
+-- I don't know what the Christmas tree looks like, so this is probably cycle detection, because it says this happens very rarely, implying that it cycles through doing this? maybe?
+-- LCM of all of the cycles of each robot?
+
+-- findCycle : Robot -> Int
+
+next : Robot -> Robot
+next (MkRobot (px,py) (vx,vy)) = MkRobot ((px + vx) `mod` 101, (py + vy) `mod` 103) (vx,vy)
+
+positionOf : Robot -> (Int, Int)
+positionOf (MkRobot p _) = p
+
+renderRobots : List Robot -> Int -> IO ()
+renderRobots _ 10404 = pure ()
+renderRobots l i = do
+    putStr ("\n\n" ++ show i ++ "\n")
+    putStrLn (renderMap (map positionOf l))
+    renderRobots (map next l) (i + 1)
+
+Eq Robot where
+    (==) (MkRobot p1 v1) (MkRobot p2 v2) = p1 == p2 && v1 == v2
+
+-- wait, this is a cycle detection problem definitely
+-- if a tree shows itself, it HAS to repeat since this wraps around and is constant position/velocity
+findCycle : Robot -> Robot -> Bool -> Int -> Int
+findCycle init current isFirst num =
+    if init == current && not isFirst then num
+    else
+        findCycle init (next current) False (num + 1)
+
+-- https://stackoverflow.com/a/7922967
+-- Euclidean algorithm
+gcd : Int -> Int -> Int
+gcd a 0 = a
+gcd a b = gcd b (a `mod` b)
+
+-- copied from Haskell source
+lcm             : Int -> Int -> Int
+{-# SPECIALISE lcm :: Int -> Int -> Int #-}
+{-# SPECIALISE lcm :: Word -> Word -> Word #-}
+{-# NOINLINE [2] lcm #-} -- See Note [Allow time for type-specialisation rules to fire]
+lcm _ 0         =  0
+lcm 0 _         =  0
+lcm x y         =  abs ((x `div` (gcd x y)) * y)
+
+-- https://discourse.haskell.org/t/folding-a-lcm-of-a-list/841
+lcmm : List Int -> Int
+lcmm [] = 1
+lcmm (x::xs) = lcm x (lcmm xs)
+
+-- 10403 is the time for the image to cycle, so we need to examine 0-10403
+-- oh wait that makes sense lol
+-- it's the size of the image
+
+-- From visually inspecting, it looks like the more Christmas-tree-like ones are less random, i.e. more squares are zero
+
+count : (Eq a) => List a -> a -> Int
+count (x :: xs) el = (if x == el then 1 else 0) + count xs el
+count [] _ = 0
+
+zeroSquares : SortedMap (Int, Int) Char -> Int
+zeroSquares m =
+    let s = sort (keys m)
+        (maxY, maxX) = (103,101)
+        (minY, minX) = (0,0) in sum (map (\y => sum (map (\x => if isJust (lookup (cast x,cast y) m) then 0 else 1) [minX..maxX])) [minY..maxY])
+
+renderRobotsIfOrganized : List Robot -> Int -> IO ()
+renderRobotsIfOrganized l i = do
+    let count = zeroSquares (fromList (map (,'#') (map positionOf l)))
+    printLn count
+    (if count < 10000 then do
+        putStr ("\n\n" ++ show i ++ "\n")
+        putStrLn (renderMap (map positionOf l)) else putStr "")
+    renderRobotsIfOrganized (map next l) (i + 1)
+
+partial part2 : String -> IO Int
+part2 input =
+    let robots = map parseRobot (lines input)
+        -- cycles = map (\r => findCycle r r True 0) robots
+        -- fullCycle = lcmm cycles in pure fullCycle
+    in
+    do
+        renderRobots robots 0
+        pure 2
+
+-- the way I solved this is really dumb, I figured a Christmas tree would have lots of robots in a row so searched
+-- for more and more #s in my terminal until only one was left (in the 10403 unique maps), and that showed a Christmas
+-- tree. See `day14_soln_kinda.png`.
+
+-- I want to do this programmatically though
 
 public export
 partial solve : Fin 2 -> String -> IO Int
 solve 0 = pure . part1
-solve 1 = pure . part2
+solve 1 = part2
