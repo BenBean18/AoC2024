@@ -11,7 +11,7 @@ import Data.SortedSet
 import Data.List1
 import System
 
--- Part 1
+-- Part 1: 437us
 
 -- late start b/c minifrc
 
@@ -80,7 +80,7 @@ part1 input =
         finalPositions = map robotAfter100 robots
         quadrantMaps = foldl addLists [0,0,0,0] (map (\pos => map ((flip isWithin) pos) quadrants) finalPositions) in foldl (*) 1 quadrantMaps
 
--- Part 2
+-- Part 2: 15sec...need to optimize but will sleep first
 
 -- If they're the same type of robots, they should have a hard-coded Easter egg: very rarely, most of the robots should arrange themselves into a picture of a Christmas tree.
 
@@ -109,8 +109,14 @@ renderRobots : List Robot -> Int -> IO ()
 renderRobots _ 10404 = pure ()
 renderRobots l i = do
     putStr ("\n\n" ++ show i ++ "\n")
-    putStrLn (renderMap (map positionOf l))
+    let rendered = renderMap (map positionOf l)
+    let border = "###############################"
+    let containsBorder = border `isInfixOf` rendered
+    putStrLn rendered
     renderRobots (map next l) (i + 1)
+
+findTree : List Robot -> Int -> Int
+findTree l i = if "###############################" `isInfixOf` (renderMap (map positionOf l)) then i else findTree (map next l) (i+1)
 
 Eq Robot where
     (==) (MkRobot p1 v1) (MkRobot p2 v2) = p1 == p2 && v1 == v2
@@ -159,30 +165,24 @@ zeroSquares m =
         (maxY, maxX) = (103,101)
         (minY, minX) = (0,0) in sum (map (\y => sum (map (\x => if isJust (lookup (cast x,cast y) m) then 0 else 1) [minX..maxX])) [minY..maxY])
 
-renderRobotsIfOrganized : List Robot -> Int -> IO ()
-renderRobotsIfOrganized l i = do
-    let count = zeroSquares (fromList (map (,'#') (map positionOf l)))
-    printLn count
-    (if count < 10000 then do
-        putStr ("\n\n" ++ show i ++ "\n")
-        putStrLn (renderMap (map positionOf l)) else putStr "")
-    renderRobotsIfOrganized (map next l) (i + 1)
-
 partial part2 : String -> IO Int
 part2 input =
     let robots = map parseRobot (lines input)
         -- cycles = map (\r => findCycle r r True 0) robots
         -- fullCycle = lcmm cycles in pure fullCycle
-    in
-    do
-        renderRobots robots 0
-        pure 2
+    -- in
+    -- do
+    --     renderRobots robots 0
+    --     pure 2
+    in pure (findTree robots 0)
 
 -- the way I solved this is really dumb, I figured a Christmas tree would have lots of robots in a row so searched
 -- for more and more #s in my terminal until only one was left (in the 10403 unique maps), and that showed a Christmas
 -- tree. See `day14_soln_kinda.png`.
 
 -- I want to do this programmatically though
+
+-- this is such a cool idea! https://www.reddit.com/r/adventofcode/comments/1hdvhvu/comment/m1z79gn/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button
 
 public export
 partial solve : Fin 2 -> String -> IO Int
