@@ -183,6 +183,7 @@ part2 input =
 -- I want to do this programmatically though
 
 -- this is such a cool idea! https://www.reddit.com/r/adventofcode/comments/1hdvhvu/comment/m1z79gn/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button
+-- also awesome https://www.reddit.com/r/adventofcode/comments/1he6in6/2024_day_14_part_2_a_different_approach/
 
 public export
 partial solve : Fin 2 -> String -> IO Int

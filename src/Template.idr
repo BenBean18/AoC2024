@@ -8,6 +8,7 @@ import Data.Nat
 import Utilities
 import Data.SortedMap
 import Data.SortedSet
+import Data.List1
 
 -- Part 1
 
