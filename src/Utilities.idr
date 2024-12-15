@@ -109,3 +109,8 @@ render2DMap m =
         (maxY, maxX) = ne last s
         (minY, minX) = ne head s
         toRender = map (\y => pack $ map (\x => (fromMaybe ' ') (lookup (cast y,cast x) m)) [minX..maxX]) [minY..maxY] in unlines toRender
+
+public export
+vis : Bool -> Lazy String -> a -> a
+vis True s a = trace s a
+vis False s a = a

@@ -67,6 +67,7 @@ main = do
             let day = fromMaybe "" (args `index` 1)
             let partStr = fromMaybe "" (args `index` 2)
             let doBench = fromMaybe "" (args `index` 3) == "b"
+            let doVisualize = fromMaybe "" (args `index` 3) == "v"
             case integerToFin (cast partStr - 1) 2 of
                 Just part => do
                     let message = (if doBench then "Benchmarking" else "Executing") ++ " Day " ++ day ++ " Part " ++ partStr
@@ -88,7 +89,7 @@ main = do
                         else if day == "12" then run (Day12.solve part) contents
                         else if day == "13" then run (Day13.solve part) contents
                         else if day == "14" then run (Day14.solve part) contents
-                        else if day == "15" then run (Day15.solve part) contents
+                        else if day == "15" then run (Day15.solve part doVisualize) contents
                         else putStr "That problem doesn't exist (or I haven't solved it yet)"
                     putStrLn ""
                 Nothing => putStrLn $ "Part " ++ partStr ++ " is invalid"

@@ -241,14 +241,14 @@ tryMove cur dir blocks walls =
 
 -- we want to check forward and left. so for (-1,0) (up) that's adding (0,-1) (left)
 -- for (1,0) (down) that's adding (0,1) (right)
-robotPush : SortedSet (Int, Int) -> ((Int, Int), SortedSet (Int, Int)) -> (Int, Int) -> ((Int, Int), SortedSet (Int, Int))
-robotPush walls (cur, blocks) dir =
+robotPush : Bool -> SortedSet (Int, Int) -> ((Int, Int), SortedSet (Int, Int)) -> (Int, Int) -> ((Int, Int), SortedSet (Int, Int))
+robotPush v walls (cur, blocks) dir =
     if (cur + dir) `contains` walls then (cur, blocks) else
     let neighbors: List (Int, Int) = map (+ cur) (neighboringPushLocations dir) -- forward, one forward-left
         neighborBlocks = filter (`contains` blocks) neighbors -- should only be one block in any of those two locations
         in
-        (trace $ render2DMap (insert cur '@' (rerender blocks walls)) ++ "\n" ++ pack [directionOf' dir]) 
-        $ case neighborBlocks of
+        (vis v $ render2DMap (insert cur '@' (rerender blocks walls)) ++ "\n" ++ pack [directionOf' dir]) $
+        case neighborBlocks of
             (neighborBlock :: []) => let (good,fn) = tryMove neighborBlock dir blocks walls in if good then ((cur + dir), fn blocks) else (cur, blocks)
             [] => (cur + dir, blocks)
             a => (trace $ "what " ++ show cur ++ " " ++ show dir ++ " " ++ show a) (cur + dir, blocks)
@@ -282,20 +282,20 @@ score' m =
         coords : List (Int, Int) = map fst boxes
         scores = map (\(y, x) => (y*100 + x)) coords in sum scores
 
-partial part2 : String -> Int
-part2 input =
+partial part2 : Bool -> String -> Int
+part2 v input =
     let (m' ::: (instructions' :: [])) = splitOn "" (lines input)
         m : SortedMap (Int, Int) Char = twoDStringToMap (pack $ modifyMap $ unpack (unlines m'))
         instructions'' : String = unlines instructions'
         instructions = map directionOf (unpack instructions'')
         (blocks,walls) = parseBlocksAndWalls m
         (ry,rx) : (Int, Int) = Builtin.fst $ (ne head) (filter (\(k,v) => v == '@') (toList m))
-        (finalPos, finalBlocks) : ((Int, Int), SortedSet (Int, Int)) = foldl (\state, i => robotPush walls state i) ((ry,rx),blocks) instructions
+        (finalPos, finalBlocks) : ((Int, Int), SortedSet (Int, Int)) = foldl (\state, i => robotPush v walls state i) ((ry,rx),blocks) instructions
         finalMap = rerender finalBlocks walls in
-            (trace $ show (ry,rx) ++ "\n" ++ render2DMap (rerender blocks walls) ++ render2DMap finalMap)
+            (vis v $ show (ry,rx) ++ "\n" ++ render2DMap (rerender blocks walls) ++ render2DMap finalMap)
             (score' finalMap)
 
 public export
-partial solve : Fin 2 -> String -> IO Int
-solve 0 = pure . part1
-solve 1 = pure . part2
+partial solve : Fin 2 -> Bool -> String -> IO Int
+solve 0 v = pure . part1
+solve 1 v = pure . (part2 v)
