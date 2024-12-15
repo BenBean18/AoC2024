@@ -81,7 +81,14 @@ moveFromDot m dir =
         (maxY, maxX) = ne last s
         positions : List (Int, Int) = genRange (ry,rx) dir (maxY, maxX)
         values : List Char = map (\p => fromMaybe '.' (lookup p m)) positions
-        newEntries = zip positions (moveRight values) in (trace $ show (ry,rx) ++ show (pack values) ++ "\n" ++ render2DMap m) $ mergeLeft (fromList newEntries) m
+        newEntries = zip positions (moveRight values) in (trace $ show (ry,rx){- ++ show (pack values) ++ "\n" ++ render2DMap m-}) $ mergeLeft (fromList newEntries) m
+
+score : SortedMap (Int, Int) Char -> Int
+score m = 
+    let l : List ((Int, Int), Char) = toList m
+        boxes = filter (\(k,v) => v == 'O') l
+        coords : List (Int, Int) = map fst boxes
+        scores = map (\(y, x) => (y*100 + x)) coords in sum scores
 
 partial part1 : String -> Int
 part1 input =
@@ -90,7 +97,7 @@ part1 input =
         instructions'' : String = unlines instructions'
         instructions = map directionOf (unpack instructions'')
         t : List (Int, Int) = [(0,-1)]
-        finalState = foldl moveFromDot m instructions in (trace $ show instructions ++ "\n" ++ render2DMap finalState) 1
+        finalState = foldl moveFromDot m instructions in (trace $ show instructions ++ "\n" ++ render2DMap finalState) (score finalState)
 
 -- Part 2
 
