@@ -113,8 +113,37 @@ part1 input =
 -- then sort and look for the first empty space or wall
 -- this feels horribly inefficient, but much better than doing things with strings and converting maps (cough cough part 1)
 
--- these will be squares, format: type tl br
-data Object = Block (Int, Int) (Int, Int) | Wall (Int, Int) (Int, Int)
+flip : (Int, Int) -> (Int, Int)
+flip (a,b) = (b,a)
+
+-- blocks will be represented as left coordinate, i.e. only the [
+-- SortedSet looks to be implemented with a SortedMap which looks to be a tree map, so O(log n)
+-- HashMap/HashSet would be better, but hopefully this is fast enough since I don't think Idris has those builtin
+
+compose : List (Bool, (SortedSet (Int, Int) -> SortedSet (Int, Int))) -> (Bool, (SortedSet (Int, Int) -> SortedSet (Int, Int)))
+compose ((True, fn)::xs) =
+    let (good,f) = compose xs in if not good then (False, id) else (True, fn . f)
+compose ((False, _) :: _) = (False, id) -- if we reach an invalid move, end early and just return identity
+compose [] = (True, id)
+
+tryMove : (Int, Int) -> (Int, Int) -> SortedSet (Int, Int) -> SortedSet (Int, Int) -> (Bool, (SortedSet (Int, Int) -> SortedSet (Int, Int)))
+tryMove cur dir blocks walls =
+    let neighbors: List (Int, Int) = [cur + dir, cur + dir + (flip dir), cur + dir - (flip dir)] -- forward, one forward-left, one forward-right
+    in
+    if any (`contains` walls) neighbors then
+        (False, id) -- blocked by a wall, can't move
+    else if not (any (`contains` walls) neighbors) && not (any (`contains` blocks) neighbors) then
+        (True, (\s => insert (cur + dir) (delete cur s))) -- empty space ahead, free to move
+    else
+        compose $ (True, (\s => insert (cur + dir) (delete cur s))) :: (map (\n => tryMove n dir blocks walls) neighbors)
+
+-- we want to check forward and left. so for (-1,0) (up) that's adding (0,-1) (left)
+-- for (1,0) (down) that's adding (0,1) (right)
+partial robotPush : SortedSet (Int, Int) -> ((Int, Int), SortedSet (Int, Int)) -> (Int, Int) -> ((Int, Int), SortedSet (Int, Int))
+robotPush walls (cur, blocks) dir = if (cur + dir) `contains` walls then (cur, blocks) else
+    let neighbors: List (Int, Int) = [cur + dir, cur + dir + (flip dir)] -- forward, one forward-left
+        (neighborBlock::[]) = filter (`contains` blocks) neighbors -- should only be one block in any of those two locations
+        (good,fn) = tryMove neighborBlock dir blocks walls in if good then (neighborBlock, fn blocks) else (cur, blocks)
 
 part2 : String -> Int
 part2 input = 2
