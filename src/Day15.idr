@@ -101,6 +101,21 @@ part1 input =
 
 -- Part 2
 
+-- collision something? there must be a fast way to do this
+-- seems kind of like a physics engine, honestly
+-- basically you try pushing until you hit a wall
+-- maybe mark each cube as immovable in a specific direction if we've failed once
+-- but that's hard to update
+-- represent each cube as a polygon and like send a ray in the moving direction from the robot or something?
+-- once the ray hits an empty space, move everything "selected" by it before that empty space one unit in its direction
+-- if the ray hits a wall before then, do nothing
+-- this can simply be a filter on the list of polygons/walls, I think?
+-- then sort and look for the first empty space or wall
+-- this feels horribly inefficient, but much better than doing things with strings and converting maps (cough cough part 1)
+
+-- these will be squares, format: type tl br
+data Object = Block (Int, Int) (Int, Int) | Wall (Int, Int) (Int, Int)
+
 part2 : String -> Int
 part2 input = 2
 
