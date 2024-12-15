@@ -171,16 +171,19 @@ tryMove cur dir blocks walls =
     else if not (any (`contains` walls) neighbors) && not (any (`contains` blocks) neighbors) then
         (True, (\s => insert (cur + dir) (delete cur s))) -- empty space ahead, free to move
     else
-        compose $ (True, (\s => insert (cur + dir) (delete cur s))) :: (map (\n => tryMove n dir blocks walls) neighbors)
+        let blockNeighbors = filter (`contains` blocks) neighbors in
+        -- VERY important that we only call this function with blocks, I had just `neighbors` before as the list for the map
+        compose $ (True, (\s => insert (cur + dir) (delete cur s))) :: (map (\n => tryMove n dir blocks walls) blockNeighbors)
 
 -- we want to check forward and left. so for (-1,0) (up) that's adding (0,-1) (left)
 -- for (1,0) (down) that's adding (0,1) (right)
 robotPush : SortedSet (Int, Int) -> ((Int, Int), SortedSet (Int, Int)) -> (Int, Int) -> ((Int, Int), SortedSet (Int, Int))
-robotPush walls (cur, blocks) dir = (trace $ pack [directionOf' dir] ++ "\n" ++ render2DMap (insert cur '@' (rerender blocks walls))) $
+robotPush walls (cur, blocks) dir =
     if (cur + dir) `contains` walls then (cur, blocks) else
     let neighbors: List (Int, Int) = map (+ cur) (neighboringPushLocations dir) -- forward, one forward-left
         neighborBlocks = filter (`contains` blocks) neighbors -- should only be one block in any of those two locations
-        in (trace $ show neighborBlocks) 
+        in
+        (trace $ show neighborBlocks ++ "\n" ++ pack [directionOf' dir] ++ "\n" ++ render2DMap (insert cur '@' (rerender blocks walls))) 
         $ case neighborBlocks of
             (neighborBlock :: []) => let (good,fn) = tryMove neighborBlock dir blocks walls in if good then ((cur + dir), fn blocks) else (cur, blocks)
             [] => (cur + dir, blocks)
