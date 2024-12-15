@@ -23,6 +23,13 @@ directionOf 'v' = (1,0)
 directionOf '^' = (-1,0)
 directionOf _ = (0,0)
 
+directionOf' : (Int, Int) -> Char
+directionOf' (0,1) = '>' 
+directionOf' (0,-1) = '<'
+directionOf' (1,0) = 'v'
+directionOf' (-1,0) = '^'
+directionOf' _ = 'X'
+
 {-
 ########
 #..O.O.#
@@ -116,6 +123,11 @@ part1 input =
 flip : (Int, Int) -> (Int, Int)
 flip (a,b) = (b,a)
 
+rerender : SortedSet (Int, Int) -> SortedSet (Int, Int) -> SortedMap (Int, Int) Char
+rerender blocks walls =
+    let blockMap : SortedMap (Int, Int) Char = fromList $ map (,'[') (Data.SortedSet.toList blocks)
+        wallMap : SortedMap (Int, Int) Char = fromList $ map (,'#') (Data.SortedSet.toList walls) in mergeLeft blockMap wallMap
+
 -- blocks will be represented as left coordinate, i.e. only the [
 -- SortedSet looks to be implemented with a SortedMap which looks to be a tree map, so O(log n)
 -- HashMap/HashSet would be better, but hopefully this is fast enough since I don't think Idris has those builtin
@@ -126,9 +138,33 @@ compose ((True, fn)::xs) =
 compose ((False, _) :: _) = (False, id) -- if we reach an invalid move, end early and just return identity
 compose [] = (True, id)
 
+-- weird because side is treated differently than vertical
+neighboringBlockLocations : (Int, Int) -> List (Int, Int)
+-- down is down, down left, down right
+neighboringBlockLocations (1,0) = [(1,0),(1,-1),(1,1)]
+-- up is up, up left, up right
+neighboringBlockLocations (-1,0) = [(-1,0),(-1,-1),(-1,1)]
+-- left is just two to the left, if it's one to the left that's an intersection
+neighboringBlockLocations (0,-1) = [(0,-2)]
+-- right is two to the right, if it's one to the right that's an intersection
+neighboringBlockLocations (0,1) = [(0,2)]
+neighboringBlockLocations _ = []
+
+-- weird because side is treated differently than vertical
+neighboringPushLocations : (Int, Int) -> List (Int, Int)
+-- down is down, down left
+neighboringPushLocations (1,0) = [(1,0),(1,-1)]
+-- up is up, up left
+neighboringPushLocations (-1,0) = [(-1,0),(-1,-1)]
+-- left is two to the left, if it's one to the left that's an intersection
+neighboringPushLocations (0,-1) = [(0,-2)]
+-- right is one to the right
+neighboringPushLocations (0,1) = [(0,1)]
+neighboringPushLocations _ = []
+
 tryMove : (Int, Int) -> (Int, Int) -> SortedSet (Int, Int) -> SortedSet (Int, Int) -> (Bool, (SortedSet (Int, Int) -> SortedSet (Int, Int)))
 tryMove cur dir blocks walls =
-    let neighbors: List (Int, Int) = [cur + dir, cur + dir + (flip dir), cur + dir - (flip dir)] -- forward, one forward-left, one forward-right
+    let neighbors: List (Int, Int) = map (+ cur) (neighboringBlockLocations dir) -- forward, one forward-left, one forward-right
     in
     if any (`contains` walls) neighbors then
         (False, id) -- blocked by a wall, can't move
@@ -139,14 +175,48 @@ tryMove cur dir blocks walls =
 
 -- we want to check forward and left. so for (-1,0) (up) that's adding (0,-1) (left)
 -- for (1,0) (down) that's adding (0,1) (right)
-partial robotPush : SortedSet (Int, Int) -> ((Int, Int), SortedSet (Int, Int)) -> (Int, Int) -> ((Int, Int), SortedSet (Int, Int))
-robotPush walls (cur, blocks) dir = if (cur + dir) `contains` walls then (cur, blocks) else
-    let neighbors: List (Int, Int) = [cur + dir, cur + dir + (flip dir)] -- forward, one forward-left
-        (neighborBlock::[]) = filter (`contains` blocks) neighbors -- should only be one block in any of those two locations
-        (good,fn) = tryMove neighborBlock dir blocks walls in if good then (neighborBlock, fn blocks) else (cur, blocks)
+robotPush : SortedSet (Int, Int) -> ((Int, Int), SortedSet (Int, Int)) -> (Int, Int) -> ((Int, Int), SortedSet (Int, Int))
+robotPush walls (cur, blocks) dir = (trace $ pack [directionOf' dir] ++ "\n" ++ render2DMap (insert cur '@' (rerender blocks walls))) $
+    if (cur + dir) `contains` walls then (cur, blocks) else
+    let neighbors: List (Int, Int) = map (+ cur) (neighboringPushLocations dir) -- forward, one forward-left
+        neighborBlocks = filter (`contains` blocks) neighbors -- should only be one block in any of those two locations
+        in (trace $ show neighborBlocks) 
+        $ case neighborBlocks of
+            (neighborBlock :: []) => let (good,fn) = tryMove neighborBlock dir blocks walls in if good then ((cur + dir), fn blocks) else (cur, blocks)
+            [] => (cur + dir, blocks)
+            a => (trace $ "what " ++ show cur ++ " " ++ show dir ++ " " ++ show a) (cur + dir, blocks)
 
-part2 : String -> Int
-part2 input = 2
+{-
+
+    If the tile is #, the new map contains ## instead.
+    If the tile is O, the new map contains [] instead.
+    If the tile is ., the new map contains .. instead.
+    If the tile is @, the new map contains @. instead.
+
+ -}
+modifyMap : List Char -> List Char
+modifyMap ('#'::xs) = '#'::'#'::(modifyMap xs)
+modifyMap ('O'::xs) = '['::']'::(modifyMap xs)
+modifyMap ('.'::xs) = '.'::'.'::(modifyMap xs)
+modifyMap ('@'::xs) = '@'::'.'::(modifyMap xs)
+modifyMap (a::xs) = a::(modifyMap xs) -- shouldn't happen except maybe newlines
+modifyMap [] = []
+
+parseBlocksAndWalls : SortedMap (Int, Int) Char -> (SortedSet (Int, Int), SortedSet (Int, Int))
+parseBlocksAndWalls m =
+    let l: List ((Int, Int), Char) = toList m
+        blocks = fromList $ map fst $ filter (\(k,v) => v == '[') l
+        walls = fromList $ map fst $ filter (\(k,v) => v == '#') l in (blocks,walls)
+
+partial part2 : String -> Int
+part2 input =
+    let (m' ::: (instructions' :: [])) = splitOn "" (lines input)
+        m : SortedMap (Int, Int) Char = twoDStringToMap (pack $ modifyMap $ unpack (unlines m'))
+        instructions'' : String = unlines instructions'
+        instructions = map directionOf (unpack instructions'')
+        (blocks,walls) = parseBlocksAndWalls m
+        (ry,rx) : (Int, Int) = Builtin.fst $ (ne head) (filter (\(k,v) => v == '@') (toList m))
+        (finalPos, finalBlocks) : ((Int, Int), SortedSet (Int, Int)) = foldl (\state, i => robotPush walls state i) ((ry,rx),blocks) instructions in (trace $ show (ry,rx) ++ "\n" ++ render2DMap (rerender blocks walls) ++ render2DMap (rerender finalBlocks walls)) 2
 
 public export
 partial solve : Fin 2 -> String -> IO Int
