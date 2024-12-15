@@ -126,7 +126,9 @@ flip (a,b) = (b,a)
 rerender : SortedSet (Int, Int) -> SortedSet (Int, Int) -> SortedMap (Int, Int) Char
 rerender blocks walls =
     let blockMap : SortedMap (Int, Int) Char = fromList $ map (,'[') (Data.SortedSet.toList blocks)
-        wallMap : SortedMap (Int, Int) Char = fromList $ map (,'#') (Data.SortedSet.toList walls) in mergeLeft blockMap wallMap
+        otherSide : List (Int, Int) = (map (\(y,x)=>(y,x+1)) (Data.SortedSet.toList blocks))
+        otherBlockMap : SortedMap (Int, Int) Char = fromList $ map (,']') otherSide
+        wallMap : SortedMap (Int, Int) Char = fromList $ map (,'#') (Data.SortedSet.toList walls) in mergeLeft blockMap (mergeLeft otherBlockMap wallMap)
 
 -- blocks will be represented as left coordinate, i.e. only the [
 -- SortedSet looks to be implemented with a SortedMap which looks to be a tree map, so O(log n)
@@ -162,13 +164,73 @@ neighboringPushLocations (0,-1) = [(0,-2)]
 neighboringPushLocations (0,1) = [(0,1)]
 neighboringPushLocations _ = []
 
+{-
+<
+cur (6, 3) blocked
+####################
+##[]  []      [][]##
+##[]           [] ##
+##        [][][][]##
+##         []   []##
+##  ##[]          ##
+## [][]@          ##
+##     [][]   [][]##
+##       []   []  ##
+####################
+
+<
+####################
+##[]  []      [][]##
+##[]           [] ##
+##        [][][][]##
+##         []   []##
+##  ##[]          ##
+## [][]@          ##
+##     [][]   [][]##
+##       []   []  ##
+####################
+
+this is wrong, the block should not be checking two to the left for a wall since it's already the left side, fixed below
+WORKS ON BIG EXAMPLE NOW
+ -}
+
+-- weird because side is treated differently than vertical
+wallCheckingLocations : (Int, Int) -> List (Int, Int)
+-- down is down, down left, down right
+wallCheckingLocations (1,0) = [(1,0),(1,1)]
+-- up is up, up left, up right
+wallCheckingLocations (-1,0) = [(-1,0),(-1,1)]
+-- left is just two to the left, if it's one to the left that's an intersection
+wallCheckingLocations (0,-1) = [(0,-1)]
+-- right is two to the right, if it's one to the right that's an intersection
+wallCheckingLocations (0,1) = [(0,2)]
+wallCheckingLocations _ = []
+
+{-
+^
+####################
+##    []    []  []##
+##            []  ##
+##  [][]    []  []##
+##   []   []  []  ##
+##[]##    []      ##
+##[][]        []  ##
+## @   []  [] [][]##
+##        []      ##
+####################
+
+this is incorrect behavior, the stack on the left is movable. why is this happening?
+oh it's because one of the neighbors is a wall, that's ok
+ -}
+
 tryMove : (Int, Int) -> (Int, Int) -> SortedSet (Int, Int) -> SortedSet (Int, Int) -> (Bool, (SortedSet (Int, Int) -> SortedSet (Int, Int)))
 tryMove cur dir blocks walls =
     let neighbors: List (Int, Int) = map (+ cur) (neighboringBlockLocations dir) -- forward, one forward-left, one forward-right
+        toCheckForWall : List (Int, Int) = map (+ cur) (wallCheckingLocations dir) -- don't need to check forward-left for wall, that ONLY interferes if it's a block (because we're storing all blocks of walls, not just the left side)
     in
-    if any (`contains` walls) neighbors then
-        (False, id) -- blocked by a wall, can't move
-    else if not (any (`contains` walls) neighbors) && not (any (`contains` blocks) neighbors) then
+    if any (`contains` walls) toCheckForWall then
+        (trace $ "cur " ++ show cur ++ " blocked") $ (False, id) -- blocked by all walls, can't move
+    else if (not (any (`contains` walls) toCheckForWall)) && not (any (`contains` blocks) neighbors) then
         (True, (\s => insert (cur + dir) (delete cur s))) -- empty space ahead, free to move
     else
         let blockNeighbors = filter (`contains` blocks) neighbors in
@@ -183,7 +245,7 @@ robotPush walls (cur, blocks) dir =
     let neighbors: List (Int, Int) = map (+ cur) (neighboringPushLocations dir) -- forward, one forward-left
         neighborBlocks = filter (`contains` blocks) neighbors -- should only be one block in any of those two locations
         in
-        (trace $ show neighborBlocks ++ "\n" ++ pack [directionOf' dir] ++ "\n" ++ render2DMap (insert cur '@' (rerender blocks walls))) 
+        (trace $ render2DMap (insert cur '@' (rerender blocks walls)) ++ "\n" ++ pack [directionOf' dir]) 
         $ case neighborBlocks of
             (neighborBlock :: []) => let (good,fn) = tryMove neighborBlock dir blocks walls in if good then ((cur + dir), fn blocks) else (cur, blocks)
             [] => (cur + dir, blocks)
