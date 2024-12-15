@@ -88,7 +88,7 @@ main = do
                         else if day == "12" then run (Day12.solve part) contents
                         else if day == "13" then run (Day13.solve part) contents
                         else if day == "14" then run (Day14.solve part) contents
-                        else if day == "15" then run (Day14.solve part) contents
+                        else if day == "15" then run (Day15.solve part) contents
                         else putStr "That problem doesn't exist (or I haven't solved it yet)"
                     putStrLn ""
                 Nothing => putStrLn $ "Part " ++ partStr ++ " is invalid"

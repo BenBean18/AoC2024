@@ -9,6 +9,7 @@ import Utilities
 import Data.SortedMap
 import Data.SortedSet
 import Data.List1
+import Data.Vect
 
 -- Part 1
 
@@ -56,29 +57,40 @@ findMovablePart [] = []
 -- @. --> .@
 
 moveRight : List Char -> List Char
-moveRight (c::'.'::xs) = '.'::c::xs -- move if open space
-moveRight ('#'::xs) = '#'::xs
-moveRight (x::xs) = moveRight (x::moveRight xs)
+moveRight ('#'::xs) = '#'::xs -- stop if no space
+moveRight (c::'.'::xs) = '.'::c::xs -- swap if open space
+
+-- leave leftmost character (no swap opportunity), move the right section, then try to move the whole thing if new open dot
+moveRight (x::xs) = let new = x::moveRight xs in if new /= (x::xs) then moveRight new else new
 moveRight [] = []
 
--- so if this is valid/has empty space, we move the robot right one and cycle the list
--- @O.O.# > .@OO.#
--- again, relevant part is only before the first dot
--- @O. > .@O
--- @OOOO. > .@OOOO
+-- yes, x and y are transposed here, it's ok as long as it's consistent within the function
+genRange : (Int, Int) -> (Int, Int) -> (Int, Int) -> List (Int, Int)
+genRange (x,y) dir (maxX, maxY) =
+    if x > maxX || y > maxY then []
+    else if x < 0 || y < 0 then []
+    else
+        let next = (x,y) + dir in (x,y) :: genRange next dir (maxX, maxY)
 
--- tryMoveRight : List Char -> 
+moveFromDot : SortedMap (Int, Int) Char -> (Int, Int) -> SortedMap (Int, Int) Char
+moveFromDot m (0,0) = m
+moveFromDot m dir =
+    let l : List ((Int, Int), Char) = toList m
+        (ry,rx) : (Int, Int) = fst $ (ne head) (filter (\(k,v) => v == '@') l)
+        s = sort (keys m)
+        (maxY, maxX) = ne last s
+        positions : List (Int, Int) = genRange (ry,rx) dir (maxY, maxX)
+        values : List Char = map (\p => fromMaybe '.' (lookup p m)) positions
+        newEntries = zip positions (moveRight values) in (trace $ show (ry,rx) ++ show (pack values) ++ "\n" ++ render2DMap m) $ mergeLeft (fromList newEntries) m
 
--- pushing a chain of boxes
--- tryMove : List (List Char) -> (Int, Int) -> (Int, Int) -> List (List Char)
--- tryMove m pos move =
---     let next = pos + move in
---         if canMove (fromMaybe '.' (lookup m next)) then
-
-
-
-part1 : String -> Int
-part1 input = 1
+partial part1 : String -> Int
+part1 input =
+    let (m' ::: (instructions' :: [])) = splitOn "" (lines input)
+        m : SortedMap (Int, Int) Char = twoDStringToMap (unlines m')
+        instructions'' : String = unlines instructions'
+        instructions = map directionOf (unpack instructions'')
+        t : List (Int, Int) = [(0,-1)]
+        finalState = foldl moveFromDot m instructions in (trace $ show instructions ++ "\n" ++ render2DMap finalState) 1
 
 -- Part 2
 
@@ -86,6 +98,6 @@ part2 : String -> Int
 part2 input = 2
 
 public export
-solve : Fin 2 -> String -> IO Int
+partial solve : Fin 2 -> String -> IO Int
 solve 0 = pure . part1
 solve 1 = pure . part2
