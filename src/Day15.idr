@@ -192,6 +192,8 @@ cur (6, 3) blocked
 
 this is wrong, the block should not be checking two to the left for a wall since it's already the left side, fixed below
 WORKS ON BIG EXAMPLE NOW
+that was so hard to find, scrolling through the output of each move and checking for a correct output
+ugh
  -}
 
 -- weird because side is treated differently than vertical
@@ -229,7 +231,7 @@ tryMove cur dir blocks walls =
         toCheckForWall : List (Int, Int) = map (+ cur) (wallCheckingLocations dir) -- don't need to check forward-left for wall, that ONLY interferes if it's a block (because we're storing all blocks of walls, not just the left side)
     in
     if any (`contains` walls) toCheckForWall then
-        (trace $ "cur " ++ show cur ++ " blocked") $ (False, id) -- blocked by all walls, can't move
+        {-(trace $ "cur " ++ show cur ++ " blocked") $ -}(False, id) -- blocked by all walls, can't move
     else if (not (any (`contains` walls) toCheckForWall)) && not (any (`contains` blocks) neighbors) then
         (True, (\s => insert (cur + dir) (delete cur s))) -- empty space ahead, free to move
     else
@@ -273,6 +275,13 @@ parseBlocksAndWalls m =
         blocks = fromList $ map fst $ filter (\(k,v) => v == '[') l
         walls = fromList $ map fst $ filter (\(k,v) => v == '#') l in (blocks,walls)
 
+score' : SortedMap (Int, Int) Char -> Int
+score' m = 
+    let l : List ((Int, Int), Char) = toList m
+        boxes = filter (\(k,v) => v == '[') l
+        coords : List (Int, Int) = map fst boxes
+        scores = map (\(y, x) => (y*100 + x)) coords in sum scores
+
 partial part2 : String -> Int
 part2 input =
     let (m' ::: (instructions' :: [])) = splitOn "" (lines input)
@@ -281,7 +290,10 @@ part2 input =
         instructions = map directionOf (unpack instructions'')
         (blocks,walls) = parseBlocksAndWalls m
         (ry,rx) : (Int, Int) = Builtin.fst $ (ne head) (filter (\(k,v) => v == '@') (toList m))
-        (finalPos, finalBlocks) : ((Int, Int), SortedSet (Int, Int)) = foldl (\state, i => robotPush walls state i) ((ry,rx),blocks) instructions in (trace $ show (ry,rx) ++ "\n" ++ render2DMap (rerender blocks walls) ++ render2DMap (rerender finalBlocks walls)) 2
+        (finalPos, finalBlocks) : ((Int, Int), SortedSet (Int, Int)) = foldl (\state, i => robotPush walls state i) ((ry,rx),blocks) instructions
+        finalMap = rerender finalBlocks walls in
+            (trace $ show (ry,rx) ++ "\n" ++ render2DMap (rerender blocks walls) ++ render2DMap finalMap)
+            (score' finalMap)
 
 public export
 partial solve : Fin 2 -> String -> IO Int
