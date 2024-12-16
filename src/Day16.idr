@@ -104,7 +104,7 @@ part1 input =
 --                 upped
 --         _ => heap
 
-decreaseKey2 : (List (Ordering,(Int,Int)), BinaryHeap (Int,((Int, Int), (Int, Int)))) -> (Int,((Int,Int),(Int,Int))) -> (List (Ordering,(Int,Int)), BinaryHeap (Int,((Int, Int), (Int, Int))))
+decreaseKey2 : (List ((Ordering,Int),(Int,Int)), BinaryHeap (Int,((Int, Int), (Int, Int)))) -> (Int,((Int,Int),(Int,Int))) -> (List ((Ordering,Int),(Int,Int)), BinaryHeap (Int,((Int, Int), (Int, Int))))
 decreaseKey2 (l,heap) (prio,val) = 
     case findIndex (\(_,v) => v == val) heap of
         (Just idx') =>
@@ -113,36 +113,108 @@ decreaseKey2 (l,heap) (prio,val) =
                 h : BinaryHeap (Int,((Int, Int), (Int, Int))) = (replaceWhen (\(_,v) => v == val) (min currentPrio prio, val) heap)
                 upped = (heapifyUp h (finToNat idx) {p2=believe_me (InBounds (finToNat idx) h)}) in 
                 -- (trace $ show h ++ "\n\n" ++ show upped) 
-                ((prio `compare` currentPrio, fst val) :: l, upped)
-        _ => ((EQ,fst val) :: l, heap)
+                (((prio `compare` currentPrio,currentPrio), fst val) :: l, upped)
+        _ => (((EQ,0),fst val) :: l, heap)
 
 highlight : List Char -> List Char
-highlight s = unpack ("\x1b" ++ "[43m" ++ (pack s) ++ "\x1b" ++ "[0m")
+highlight s = ['O']--unpack ("\x1b" ++ "[43m" ++ (pack s) ++ "\x1b" ++ "[0m")
 
-renderPath : SortedMap (Int, Int) Char -> SortedSet (Int, Int) -> String
+renderPath : SortedMap (Int, Int) Char -> List (Int, Int) -> String
 renderPath m path = --"\x1b" ++ "c" ++
     let s = sort (keys m)
         (maxY, maxX) = ne last s
         (minY, minX) = ne head s
         toRender = map (\y => pack $ concatMap (\x => 
             let str: List Char = [(fromMaybe ' ') (lookup (cast y,cast x) m)] in
-                if (y,x) `elem` path then highlight str else str) [minX..maxX]) [minY..maxY] in unlines toRender
+                if (y,x) == (ne head) path then ['X'] else if (y,x) `elem` path then highlight str else str) [minX..maxX]) [minY..maxY] in unlines toRender
 
-partial dijkstra2 : SortedMap (Int, Int) Char -> BinaryHeap (Int,((Int, Int), (Int, Int))) -> SortedMap (Int, Int) (List (SortedSet (Int, Int))) -> SortedMap (Int, Int) (List (SortedSet (Int, Int)))
+{-
+#################
+#...#...#...#..E#
+#.#.#.#.#.#.#.#.#
+#.#.#.#...#...#.#
+#.#.#.#.###.#.#.#
+#OOO#.#.#.....#.#
+#O#O#.#.#.#####.#
+#O#O..#.#.#....X#
+#O#O#####.#.###O#
+#O#O#.......#OOO#
+#O#O###.#####O###
+#O#O#...#..OOO#.#
+#O#O#.#####O###.#
+#O#O#OOOOOOO..#.#
+#O#O#O#########.#
+#S#OOO..........#
+#################
+not continuing upward because we've already reached that vertex, which seems wrong
+we should at least add it to the list of paths
+
+11042
+#################
+#...#...#...#..E#
+#.#.#.#.#.#.#.#.#
+#.#.#.#...#...#.#
+#.#.#.#.###.#.#.#
+#OOO#.#.#.....#.#
+#O#O#.#.#.#####.#
+#O#O..#.#.#....X#
+#O#O#####.#.###O#
+#O#O#.......#OOO#
+#O#O###.#####O###
+#O#O#...#..OOO#.#
+#O#O#.#####O###.#
+#O#O#OOOOOOO..#.#
+#O#O#O#########.#
+#S#OOO..........#
+#################
+
+11042
+#################
+#...#...#...#..E#
+#.#.#.#.#.#.#.#.#
+#.#.#.#...#...#.#
+#.#.#.#.###.#.#.#
+#OOO#.#.#.....#.#
+#O#O#.#.#.#####.#
+#O#O..#.#.#OOOOX#
+#O#O#####.#O###.#
+#O#O#..OOOOO#...#
+#O#O###O#####.###
+#O#O#OOO#.....#.#
+#O#O#O#####.###.#
+#O#O#O........#.#
+#O#O#O#########.#
+#S#OOO..........#
+#################
+
+they're equal!!
+ -}
+
+-- every time we're at a node,
+-- get a list of the paths to neighbors that are either better than or equal to the current solution.
+-- to turn into a map, we do (neighbor aka destination, [path to neighbor]) for every one
+-- if better, then erase the current list of paths to that vertex and replace with the better paths
+
+
+partial dijkstra2 : SortedMap (Int, Int) Char -> BinaryHeap (Int,((Int, Int), (Int, Int))) -> SortedMap (Int, Int) (List (List (Int, Int))) -> SortedMap (Int, Int) (List (List (Int, Int)))
 dijkstra2 _ [] pathMap = pathMap
 dijkstra2 m unvisited pathMap =
     let (Just (distance,next)) = findMin unvisited in --(trace $ show (next,distance)) $
-        let pathsTakenHere : List (SortedSet (Int, Int)) = fromMaybe [singleton (fst next)] (lookup (fst next) pathMap)
+        let pathsTakenHere : List (List (Int, Int)) = fromMaybe [[fst next]] (lookup (fst next) pathMap)
             neighs : List (Int, ((Int, Int), (Int, Int))) = map (\(d,(pos,dir)) => (d+distance,(pos, dir))) (neighbors m next)
             bh :  BinaryHeap (Int,((Int,Int),(Int,Int))) = deleteMin unvisited
-            s : (List (Ordering, (Int,Int)), BinaryHeap (Int,((Int,Int),(Int,Int)))) = ([],bh)
+            s : (List ((Ordering,Int), (Int,Int)), BinaryHeap (Int,((Int,Int),(Int,Int)))) = ([],bh)
             (statuses, newUnvisited) = foldl decreaseKey2 s neighs
-            betterPaths' = filter (\(a,b) => a == LT) statuses
+            betterPaths' = filter (\((a,_),b) => a == LT) statuses
             betterPaths = map snd betterPaths' -- these are all the neighbors where we found a better path
-            additionalPaths' = filter (\(a,b) => a == EQ) statuses
+            additionalPaths' = filter (\((a,_),b) => a == EQ) statuses
             additionalPaths = map snd additionalPaths' -- these are all the neighbors where we found an equal path
-            betterPathMap = concatMap (\n => map (\thisPath => (trace $ (renderPath m thisPath)) $ (n,[Data.SortedSet.insert n thisPath])) pathsTakenHere) betterPaths
-            additionalPathMap = concatMap (\n => map (\thisPath => (n,[Data.SortedSet.insert n thisPath])) pathsTakenHere) additionalPaths
+            betterPathMap = concatMap (\n => map (\thisPath => 
+                let currentPaths = fromMaybe [] (lookup n pathMap)
+                    firstPath = if (isNil currentPaths) then "" else renderPath m (ne head (currentPaths)) in
+                (trace $ show distance ++ " - " ++ show n ++ " - " ++ show (length currentPaths) ++ " - best cost - " ++ show statuses ++ " - best: \n" ++ firstPath ++ "\n" ++ (renderPath m (n::thisPath))) $ 
+                (n,[n::thisPath])) pathsTakenHere) betterPaths
+            additionalPathMap = concatMap (\n => map (\thisPath => (trace $ show distance ++ "\n ***" ++ (renderPath m thisPath)) $ (n,[n::thisPath])) pathsTakenHere) additionalPaths
             additionalPathUpdatedMap = mergeWith (++) (fromList additionalPathMap) pathMap
             betterPathUpdatedMap = mergeLeft (fromList betterPathMap) additionalPathUpdatedMap
         in 
@@ -163,7 +235,7 @@ part2 input =
         h : BinaryHeap (Int,((Int, Int), (Int, Int))) = foldl insert [] h'
         pathMap = dijkstra2 m ([(0,start)] ++ visitable) (singleton (fst start) [])
         endPaths = fromMaybe [] $ lookup end pathMap
-        endSquares = foldl Data.SortedSet.union empty endPaths in (trace $ renderPath m endSquares ++ show endSquares ++ " " ++ show (length (Data.SortedSet.toList endSquares))) 2
+        endSquares = concat endPaths in (trace $ renderPath m endSquares ++ show endSquares ++ " " ++ show (length endSquares)) 2
             --(trace $ show h ++ "\n\n" ++ show (decreaseKey h (1,((1, 5), (-1, 0))))) $
             
 
