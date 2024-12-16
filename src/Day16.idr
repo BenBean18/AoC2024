@@ -209,14 +209,18 @@ dijkstra2 m unvisited pathMap =
             betterPaths = map snd betterPaths' -- these are all the neighbors where we found a better path
             additionalPaths' = filter (\((a,_),b) => a == EQ) statuses
             additionalPaths = map snd additionalPaths' -- these are all the neighbors where we found an equal path
-            betterPathMap = concatMap (\n => map (\thisPath => 
+            betterPathMaps : List (SortedMap (Int, Int) (List (List (Int, Int)))) = concatMap (\n => map (\thisPath => 
                 let currentPaths = fromMaybe [] (lookup n pathMap)
                     firstPath = if (isNil currentPaths) then "" else renderPath m (ne head (currentPaths)) in
                 (trace $ show distance ++ " - " ++ show n ++ " - " ++ show (length currentPaths) ++ " - best cost - " ++ show statuses ++ " - best: \n" ++ firstPath ++ "\n" ++ (renderPath m (n::thisPath))) $ 
-                (n,[n::thisPath])) pathsTakenHere) betterPaths
-            additionalPathMap = concatMap (\n => map (\thisPath => (trace $ show distance ++ "\n ***" ++ (renderPath m thisPath)) $ (n,[n::thisPath])) pathsTakenHere) additionalPaths
-            additionalPathUpdatedMap = mergeWith (++) (fromList additionalPathMap) pathMap
-            betterPathUpdatedMap = mergeLeft (fromList betterPathMap) additionalPathUpdatedMap
+                (singleton n [n::thisPath])) pathsTakenHere) betterPaths
+            betterPathMap = foldl (mergeWith (++)) empty betterPathMaps
+            additionalPathMaps = concatMap (\n => map (\thisPath => 
+                --(trace $ show distance ++ "\n ***" ++ (renderPath m thisPath)) $ 
+                (singleton n [n::thisPath])) pathsTakenHere) additionalPaths
+            additionalPathMap = foldl (mergeWith (++)) empty additionalPathMaps
+            additionalPathUpdatedMap = mergeWith (++) additionalPathMap pathMap
+            betterPathUpdatedMap = mergeLeft betterPathMap additionalPathUpdatedMap
         in 
         -- (trace $ show betterPaths ++ "\n") $ 
         -- 0
