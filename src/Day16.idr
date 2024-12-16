@@ -9,6 +9,7 @@ import Utilities
 import Data.SortedMap
 import Data.SortedSet
 import Data.List1
+import MinHeap
 
 -- Part 1
 
@@ -41,25 +42,41 @@ turnRight t = if t == (-1, 0) then (0, 1) -- up -> right
 turnLeft : (Int, Int) -> (Int, Int)
 turnLeft t = (0, 0) - turnRight t
 
-neighbors : SortedMap (Int, Int) Char -> ((Int, Int), (Int, Int)) -> List (((Int, Int), (Int, Int)), (Int, Bool))
+decreaseKey : BinaryHeap (Int,((Int, Int), (Int, Int))) -> (Int,((Int,Int),(Int,Int))) -> BinaryHeap (Int,((Int, Int), (Int, Int)))
+decreaseKey heap (prio,val) = 
+    case findIndex (\(_,v) => v == val) heap of
+        (Just idx') =>
+            let idx : Fin (length heap) = idx'
+                currentPrio : Int = fst (index' heap idx)
+                h : BinaryHeap (Int,((Int, Int), (Int, Int))) = (replaceWhen (\(_,v) => v == val) (min currentPrio prio, val) heap)
+                upped = (heapifyUp h (finToNat idx) {p2=believe_me (InBounds (finToNat idx) h)}) in 
+                -- (trace $ show h ++ "\n\n" ++ show upped) 
+                upped
+        _ => heap
+
+neighbors : SortedMap (Int, Int) Char -> ((Int, Int), (Int, Int)) -> List (Int,((Int, Int), (Int, Int)))
 neighbors m (pos,dir) = 
-    let forward = ((pos + dir, dir), (1, False))
-        left = ((pos, turnLeft dir), (1000, False))
-        right = ((pos, turnRight dir), (1000, False)) in filter (\((p,_),_) => '#' /= (fromMaybe '#' (lookup p m))) [forward, left, right] -- have to check if not wall (instead of being a dot) because that allows turning on start
+    let forward = (1,(pos + dir, dir))
+        left = (1000,(pos, turnLeft dir))
+        right = (1000,(pos, turnRight dir)) in filter (\(_,(p,_)) => '#' /= (fromMaybe '#' (lookup p m))) [forward, left, right] -- have to check if not wall (instead of being a dot) because that allows turning on start
 
 -- ideally use a min-heap but this could be fast enough maybe
 -- but...having 4 nodes for every point seems extremely inefficient...
-dijkstra : SortedMap (Int, Int) Char -> SortedMap ((Int, Int), (Int, Int)) (Int, Bool) -> (Int, Int) -> Int
-dijkstra m distanceAndVisitedMap end =
-    let l: List (((Int, Int), (Int, Int)), (Int, Bool)) = filter (\((_,_),(_,visited)) => not visited) $ Data.SortedMap.toList distanceAndVisitedMap
-        (next,(distance,_)) = (ne head) (sortBy (compare `on` (\((_,_),(distance,_)) => distance)) l) in --(trace $ show (next,distance)) $
+partial dijkstra : SortedMap (Int, Int) Char -> BinaryHeap (Int,((Int, Int), (Int, Int))) -> (Int, Int) -> Int
+dijkstra _ [] _ = 0
+dijkstra m unvisited end =
+    let (Just (distance,next)) = findMin unvisited in --(trace $ show (next,distance)) $
             if (fst next) == end then distance
             else
-                let neighs : SortedMap ((Int, Int), (Int, Int)) (Int, Bool) = fromList $ filter (\(_,(_,v)) => not v) $ map (\((pos,dir),(d,v)) => ((pos, dir),(d + distance,v))) (neighbors m next)
-                    newMap = mergeWith (\(d1,v1),(d2,v2) => (min d1 d2, v1 || v2)) neighs (insert next (distance, True) distanceAndVisitedMap)
-                in {-(trace $ show neighs) $ -}dijkstra m newMap end
+                let neighs : List (Int, ((Int, Int), (Int, Int))) = map (\(d,(pos,dir)) => (d+distance,(pos, dir))) (neighbors m next)
+                    newUnvisited = foldl decreaseKey (deleteMin unvisited) neighs
 
-part1 : String -> Int
+                in 
+                --(trace $ show (map fst newUnvisited) ++ "\n\n\n") $ 
+                -- 0
+                dijkstra m newUnvisited end
+
+partial part1 : String -> Int
 part1 input =
     let m = twoDStringToMap input
         l : List ((Int, Int), Char) = toList m
@@ -67,14 +84,23 @@ part1 input =
         end = (fst $ ne head $ (filter (\(k,v) => v == 'E') l))
         visitable'' : List ((Int, Int), Char) = filter (\(k,v) => v /= '#') l
         visitable' : List ((Int, Int), (Int, Int)) = concatMap (\p => map (p,) [(the Int 0,the Int 1),(0,-1),(1,0),(-1,0)]) (map fst visitable'')
-        visitable = SortedMap.fromList $ map (,(1000000000000000,False)) visitable' in
-            dijkstra m (mergeLeft (fromList [(start,(0,False))]) visitable) end
+        visitable = map (1000000000000000,) visitable'
+        h' = ([(0,start)] ++ visitable)
+        h : BinaryHeap (Int,((Int, Int), (Int, Int))) = foldl insert [] h' in
+            --(trace $ show h ++ "\n\n" ++ show (decreaseKey h (1,((1, 5), (-1, 0))))) $
+            dijkstra m ([(0,start)] ++ visitable) end
+
+t : BinaryHeap (Int,((Int, Int), (Int, Int)))
+t = [(0, ((2, 1), (0, 1))), (1000000000000000, ((1, 1), (-1, 0))), (1000000000000000, ((1, 1), (0, -1))), (1000000000000000, ((1, 1), (1, 0))), (1000000000000000, ((1, 1), (0, 1))), (1000000000000000, ((1, 5), (0, 1))), (1000000000000000, ((1, 5), (0, -1))), (1000000000000000, ((1, 5), (1, 0))), (1000000000000000, ((1, 5), (-1, 0))), (1000000000000000, ((1, 7), (0, 1))), (1000000000000000, ((1, 7), (0, -1))), (1000000000000000, ((1, 7), (1, 0))), (1000000000000000, ((1, 7), (-1, 0)))]
+
+partial t' : BinaryHeap (Int,((Int, Int), (Int, Int)))
+t' = foldl decreaseKey t [(20, ((1, 7), (0, -1)))]
 -- Part 2
 
 part2 : String -> Int
 part2 input = 2
 
 public export
-solve : Fin 2 -> String -> IO Int
+partial solve : Fin 2 -> String -> IO Int
 solve 0 = pure . part1
 solve 1 = pure . part2

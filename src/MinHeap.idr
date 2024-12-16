@@ -4,11 +4,13 @@ import Data.Nat
 import Data.List
 import Decidable.Decidable
 import Utilities
+import Debug.Trace
 
+public export
 interface MinHeap t where
-    partial insert : Ord a => a -> t a -> t a
-    findMin : Ord a => t a -> Maybe a
-    deleteMin : Ord a => t a -> t a
+    partial insert : Show a => Ord a => t a -> a -> t a
+    findMin : Show a => Ord a => t a -> Maybe a
+    deleteMin : Show a => Ord a => t a -> t a
 
 data BinaryTree : Type -> Type where
     Node : Ord a => a -> Maybe (BinaryTree a) -> Maybe (BinaryTree a) -> BinaryTree a
@@ -31,6 +33,7 @@ data BinaryTree : Type -> Type where
 Additionally, a binary heap can be implemented with a traditional binary tree data structure, but there is an issue with finding the adjacent element on the last level on the binary heap when adding an element. This element can be determined algorithmically or by adding extra data to the nodes, called "threading" the tree—instead of merely storing references to the children, we store the inorder successor of the node as well. 
  -}
 
+public export
 BinaryHeap : (a : Type) -> Type
 BinaryHeap a = List a
 
@@ -45,21 +48,25 @@ parent idx = (idx `minus` 1) `div` 2
 insert' : Ord a => a -> BinaryHeap a -> BinaryHeap a
 insert' = flip snoc
 
-heapifyUp : {auto p : Ord a} -> (bh : BinaryHeap a) -> (i : Nat) -> {auto p2 : InBounds i bh} -> BinaryHeap a
+public export
+heapifyUp : {auto p : Ord a} -> {auto p' : Show a} -> (bh : BinaryHeap a) -> (i : Nat) -> {auto p2 : InBounds i bh} -> BinaryHeap a
 heapifyUp heap 0 = heap
 heapifyUp heap idx = 
     let p = parent idx
         prf : InBounds p heap = believe_me (InBounds p heap)
         parentVal = p `index` heap
-        val = idx `index` heap in
-            if val < parentVal then 
+        val = idx `index` heap in --(trace $ show val ++ "------------" ++ show parentVal ++ "\n") $
+            if val < parentVal then
                 let int : List a = replaceAt p val heap
                     prf : InBounds idx int = believe_me (InBounds idx int)
-                    prf2 : InBounds idx (replaceAt idx parentVal int) = believe_me (InBounds idx (replaceAt idx parentVal int)) in
+                    prf2 : InBounds p (replaceAt idx parentVal int) = believe_me (InBounds idx (replaceAt idx parentVal int)) in
                     -- want to prove this in the future, replacing not changing the size seems obvious
-                heapifyUp (replaceAt idx parentVal int) idx
+                    -- WE HAVE TO UPDATE THE INDEX WHILE RECURSING TO THE PARENT INDEX UGHGHHGHGHGHHG
+                --(trace $ "swapping to " ++ show (replaceAt idx parentVal int) ++ "\n") $ 
+                heapifyUp (replaceAt idx parentVal int) p
             else heap
 
+public export
 heapifyDown : {auto p : Ord a} -> (bh : BinaryHeap a) -> (i : Nat) -> {auto _ : InBounds i bh} -> BinaryHeap a
 heapifyDown heap idx =
     let cs' = children idx
@@ -75,9 +82,9 @@ heapifyDown heap idx =
                         if childVal < val then 
                             let int : List a = replaceAt minChild val heap
                                 prf : InBounds idx int = believe_me (InBounds idx int)
-                                prf2 : InBounds idx (replaceAt idx childVal int) = believe_me (InBounds idx (replaceAt idx childVal int)) in
+                                prf2 : InBounds minChild (replaceAt idx childVal int) = believe_me (InBounds idx (replaceAt idx childVal int)) in
                                 -- want to prove this in the future, replacing not changing the size seems obvious
-                            heapifyDown (replaceAt idx childVal int) idx
+                            heapifyDown (replaceAt idx childVal int) minChild
                         else heap
 
 -- swap root's data with last node, remove last node
@@ -87,18 +94,9 @@ remove (a::b::xs) =
     let l = last (a::b::xs) in init (l::(tail (a::b::xs)))
 remove [] = []
 
-MinHeap BinaryHeap where
-    insert = insert'
-
-    findMin = head'
-
-    deleteMin h = 
-        case (remove h) of
-            (x::xs) => heapifyDown (x::xs) 0
-            [] => []
-
+public export
 MinHeap List where
-    insert el h = 
+    insert h el = 
         let tmp = insert' el h
             (S lastIdx) = length tmp in heapifyUp tmp lastIdx {p2=believe_me (InBounds lastIdx tmp)}
 
