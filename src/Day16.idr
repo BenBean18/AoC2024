@@ -120,7 +120,7 @@ partial dijkstra2 : SortedMap (Int, Int) Char -> BinaryHeap (Int,((Int, Int), (I
 dijkstra2 _ [] pathMap = pathMap
 dijkstra2 m unvisited pathMap =
     let (Just (distance,next)) = findMin unvisited in --(trace $ show (next,distance)) $
-        let pathsTakenHere : List (SortedSet (Int, Int)) = fromMaybe [] (lookup (fst next) pathMap)
+        let pathsTakenHere : List (SortedSet (Int, Int)) = fromMaybe [singleton (fst next)] (lookup (fst next) pathMap)
             neighs : List (Int, ((Int, Int), (Int, Int))) = map (\(d,(pos,dir)) => (d+distance,(pos, dir))) (neighbors m next)
             bh :  BinaryHeap (Int,((Int,Int),(Int,Int))) = deleteMin unvisited
             s : (List (Ordering, (Int,Int)), BinaryHeap (Int,((Int,Int),(Int,Int)))) = ([],bh)
@@ -132,11 +132,11 @@ dijkstra2 m unvisited pathMap =
             betterPathMap = concatMap (\n => map (\thisPath => (n,[Data.SortedSet.insert n thisPath])) pathsTakenHere) betterPaths
             additionalPathMap = concatMap (\n => map (\thisPath => (n,[Data.SortedSet.insert n thisPath])) pathsTakenHere) additionalPaths
             betterPathUpdatedMap = mergeLeft (fromList betterPathMap) pathMap
-            additionalPathUpdatedMap = mergeWith (++) (fromList additionalPathMap) pathMap
+            additionalPathUpdatedMap = mergeWith (++) (fromList additionalPathMap) betterPathUpdatedMap
         in 
-        --(trace $ show (map fst newUnvisited) ++ "\n\n\n") $ 
+        -- (trace $ show betterPaths ++ "\n") $ 
         -- 0
-        dijkstra2 m newUnvisited pathMap
+        dijkstra2 m newUnvisited additionalPathUpdatedMap
 
 partial part2 : String -> Int
 part2 input =
@@ -149,7 +149,9 @@ part2 input =
         visitable = map (1000000000000000,) visitable'
         h' = ([(0,start)] ++ visitable)
         h : BinaryHeap (Int,((Int, Int), (Int, Int))) = foldl insert [] h'
-        pathMap = dijkstra2 m ([(0,start)] ++ visitable) empty in (trace $ show (lookup end pathMap)) 2
+        pathMap = dijkstra2 m ([(0,start)] ++ visitable) (singleton (fst start) [])
+        endPaths = fromMaybe [] $ lookup end pathMap
+        endSquares = foldl Data.SortedSet.union empty endPaths in (trace $ show endSquares ++ " " ++ show (length (Data.SortedSet.toList endSquares))) 2
             --(trace $ show h ++ "\n\n" ++ show (decreaseKey h (1,((1, 5), (-1, 0))))) $
             
 
