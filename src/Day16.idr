@@ -116,6 +116,18 @@ decreaseKey2 (l,heap) (prio,val) =
                 ((prio `compare` currentPrio, fst val) :: l, upped)
         _ => ((EQ,fst val) :: l, heap)
 
+highlight : List Char -> List Char
+highlight s = unpack ("\x1b" ++ "[43m" ++ (pack s) ++ "\x1b" ++ "[0m")
+
+renderPath : SortedMap (Int, Int) Char -> SortedSet (Int, Int) -> String
+renderPath m path = --"\x1b" ++ "c" ++
+    let s = sort (keys m)
+        (maxY, maxX) = ne last s
+        (minY, minX) = ne head s
+        toRender = map (\y => pack $ concatMap (\x => 
+            let str: List Char = [(fromMaybe ' ') (lookup (cast y,cast x) m)] in
+                if (y,x) `elem` path then highlight str else str) [minX..maxX]) [minY..maxY] in unlines toRender
+
 partial dijkstra2 : SortedMap (Int, Int) Char -> BinaryHeap (Int,((Int, Int), (Int, Int))) -> SortedMap (Int, Int) (List (SortedSet (Int, Int))) -> SortedMap (Int, Int) (List (SortedSet (Int, Int)))
 dijkstra2 _ [] pathMap = pathMap
 dijkstra2 m unvisited pathMap =
@@ -129,14 +141,14 @@ dijkstra2 m unvisited pathMap =
             betterPaths = map snd betterPaths' -- these are all the neighbors where we found a better path
             additionalPaths' = filter (\(a,b) => a == EQ) statuses
             additionalPaths = map snd additionalPaths' -- these are all the neighbors where we found an equal path
-            betterPathMap = concatMap (\n => map (\thisPath => (n,[Data.SortedSet.insert n thisPath])) pathsTakenHere) betterPaths
+            betterPathMap = concatMap (\n => map (\thisPath => (trace $ (renderPath m thisPath)) $ (n,[Data.SortedSet.insert n thisPath])) pathsTakenHere) betterPaths
             additionalPathMap = concatMap (\n => map (\thisPath => (n,[Data.SortedSet.insert n thisPath])) pathsTakenHere) additionalPaths
-            betterPathUpdatedMap = mergeLeft (fromList betterPathMap) pathMap
-            additionalPathUpdatedMap = mergeWith (++) (fromList additionalPathMap) betterPathUpdatedMap
+            additionalPathUpdatedMap = mergeWith (++) (fromList additionalPathMap) pathMap
+            betterPathUpdatedMap = mergeLeft (fromList betterPathMap) additionalPathUpdatedMap
         in 
         -- (trace $ show betterPaths ++ "\n") $ 
         -- 0
-        dijkstra2 m newUnvisited additionalPathUpdatedMap
+        dijkstra2 m newUnvisited betterPathUpdatedMap
 
 partial part2 : String -> Int
 part2 input =
@@ -151,7 +163,7 @@ part2 input =
         h : BinaryHeap (Int,((Int, Int), (Int, Int))) = foldl insert [] h'
         pathMap = dijkstra2 m ([(0,start)] ++ visitable) (singleton (fst start) [])
         endPaths = fromMaybe [] $ lookup end pathMap
-        endSquares = foldl Data.SortedSet.union empty endPaths in (trace $ show endSquares ++ " " ++ show (length (Data.SortedSet.toList endSquares))) 2
+        endSquares = foldl Data.SortedSet.union empty endPaths in (trace $ renderPath m endSquares ++ show endSquares ++ " " ++ show (length (Data.SortedSet.toList endSquares))) 2
             --(trace $ show h ++ "\n\n" ++ show (decreaseKey h (1,((1, 5), (-1, 0))))) $
             
 
