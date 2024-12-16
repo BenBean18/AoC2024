@@ -90,15 +90,68 @@ part1 input =
             --(trace $ show h ++ "\n\n" ++ show (decreaseKey h (1,((1, 5), (-1, 0))))) $
             dijkstra m ([(0,start)] ++ visitable) end
 
-t : BinaryHeap (Int,((Int, Int), (Int, Int)))
-t = [(0, ((2, 1), (0, 1))), (1000000000000000, ((1, 1), (-1, 0))), (1000000000000000, ((1, 1), (0, -1))), (1000000000000000, ((1, 1), (1, 0))), (1000000000000000, ((1, 1), (0, 1))), (1000000000000000, ((1, 5), (0, 1))), (1000000000000000, ((1, 5), (0, -1))), (1000000000000000, ((1, 5), (1, 0))), (1000000000000000, ((1, 5), (-1, 0))), (1000000000000000, ((1, 7), (0, 1))), (1000000000000000, ((1, 7), (0, -1))), (1000000000000000, ((1, 7), (1, 0))), (1000000000000000, ((1, 7), (-1, 0)))]
-
-partial t' : BinaryHeap (Int,((Int, Int), (Int, Int)))
-t' = foldl decreaseKey t [(20, ((1, 7), (0, -1)))]
 -- Part 2
 
-part2 : String -> Int
-part2 input = 2
+-- decreaseKey2 : Show a => Show p => Eq a => Eq p => Ord a => Ord p => BinaryHeap (Int,a,List p) -> (Int,a,List p) -> BinaryHeap (Int,a,List p)
+-- decreaseKey2 heap (prio,val,path) = 
+--     case findIndex (\(_,v,_) => v == val) heap of
+--         (Just idx') =>
+--             let idx : Fin (length heap) = idx'
+--                 (currentPrio,_,currentPath) = index' heap idx
+--                 h : BinaryHeap (Int,a,List p) = (replaceWhen (\(_,v,_) => v == val) (min currentPrio prio, val, if currentPrio == prio then path ++ currentPath else if min currentPrio prio == prio then path else currentPath) heap)
+--                 upped = (heapifyUp h (finToNat idx) {p2=believe_me (InBounds (finToNat idx) h)}) in 
+--                 -- (trace $ show h ++ "\n\n" ++ show upped) 
+--                 upped
+--         _ => heap
+
+decreaseKey2 : (List (Ordering,(Int,Int)), BinaryHeap (Int,((Int, Int), (Int, Int)))) -> (Int,((Int,Int),(Int,Int))) -> (List (Ordering,(Int,Int)), BinaryHeap (Int,((Int, Int), (Int, Int))))
+decreaseKey2 (l,heap) (prio,val) = 
+    case findIndex (\(_,v) => v == val) heap of
+        (Just idx') =>
+            let idx : Fin (length heap) = idx'
+                currentPrio : Int = fst (index' heap idx)
+                h : BinaryHeap (Int,((Int, Int), (Int, Int))) = (replaceWhen (\(_,v) => v == val) (min currentPrio prio, val) heap)
+                upped = (heapifyUp h (finToNat idx) {p2=believe_me (InBounds (finToNat idx) h)}) in 
+                -- (trace $ show h ++ "\n\n" ++ show upped) 
+                ((prio `compare` currentPrio, fst val) :: l, upped)
+        _ => ((EQ,fst val) :: l, heap)
+
+partial dijkstra2 : SortedMap (Int, Int) Char -> BinaryHeap (Int,((Int, Int), (Int, Int))) -> SortedMap (Int, Int) (List (SortedSet (Int, Int))) -> SortedMap (Int, Int) (List (SortedSet (Int, Int)))
+dijkstra2 _ [] pathMap = pathMap
+dijkstra2 m unvisited pathMap =
+    let (Just (distance,next)) = findMin unvisited in --(trace $ show (next,distance)) $
+        let pathsTakenHere : List (SortedSet (Int, Int)) = fromMaybe [] (lookup (fst next) pathMap)
+            neighs : List (Int, ((Int, Int), (Int, Int))) = map (\(d,(pos,dir)) => (d+distance,(pos, dir))) (neighbors m next)
+            bh :  BinaryHeap (Int,((Int,Int),(Int,Int))) = deleteMin unvisited
+            s : (List (Ordering, (Int,Int)), BinaryHeap (Int,((Int,Int),(Int,Int)))) = ([],bh)
+            (statuses, newUnvisited) = foldl decreaseKey2 s neighs
+            betterPaths' = filter (\(a,b) => a == LT) statuses
+            betterPaths = map snd betterPaths' -- these are all the neighbors where we found a better path
+            additionalPaths' = filter (\(a,b) => a == EQ) statuses
+            additionalPaths = map snd additionalPaths' -- these are all the neighbors where we found an equal path
+            betterPathMap = concatMap (\n => map (\thisPath => (n,[Data.SortedSet.insert n thisPath])) pathsTakenHere) betterPaths
+            additionalPathMap = concatMap (\n => map (\thisPath => (n,[Data.SortedSet.insert n thisPath])) pathsTakenHere) additionalPaths
+            betterPathUpdatedMap = mergeLeft (fromList betterPathMap) pathMap
+            additionalPathUpdatedMap = mergeWith (++) (fromList additionalPathMap) pathMap
+        in 
+        --(trace $ show (map fst newUnvisited) ++ "\n\n\n") $ 
+        -- 0
+        dijkstra2 m newUnvisited pathMap
+
+partial part2 : String -> Int
+part2 input =
+    let m = twoDStringToMap input
+        l : List ((Int, Int), Char) = toList m
+        start : ((Int, Int), (Int, Int)) = ((fst $ ne head $ (filter (\(k,v) => v == 'S') l)), (0,1))
+        end = (fst $ ne head $ (filter (\(k,v) => v == 'E') l))
+        visitable'' : List ((Int, Int), Char) = filter (\(k,v) => v /= '#') l
+        visitable' : List ((Int, Int), (Int, Int)) = concatMap (\p => map (p,) [(the Int 0,the Int 1),(0,-1),(1,0),(-1,0)]) (map fst visitable'')
+        visitable = map (1000000000000000,) visitable'
+        h' = ([(0,start)] ++ visitable)
+        h : BinaryHeap (Int,((Int, Int), (Int, Int))) = foldl insert [] h'
+        pathMap = dijkstra2 m ([(0,start)] ++ visitable) empty in (trace $ show (lookup end pathMap)) 2
+            --(trace $ show h ++ "\n\n" ++ show (decreaseKey h (1,((1, 5), (-1, 0))))) $
+            
 
 public export
 partial solve : Fin 2 -> String -> IO Int
