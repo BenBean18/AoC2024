@@ -199,7 +199,9 @@ they're equal!!
 partial dijkstra2 : SortedMap (Int, Int) Char -> BinaryHeap (Int,((Int, Int), (Int, Int))) -> SortedMap (Int, Int) (List (List (Int, Int))) -> SortedMap (Int, Int) (List (List (Int, Int)))
 dijkstra2 _ [] pathMap = pathMap
 dijkstra2 m unvisited pathMap =
-    let (Just (distance,next)) = findMin unvisited in --(trace $ show (next,distance)) $
+    let (Just (distance,next)) = findMin unvisited in (trace $ show (next,distance)) $
+        if (fst next) == (1,15) then pathMap else
+        if distance > 11048 then pathMap else
         let pathsTakenHere : List (List (Int, Int)) = fromMaybe [[fst next]] (lookup (fst next) pathMap)
             neighs : List (Int, ((Int, Int), (Int, Int))) = map (\(d,(pos,dir)) => (d+distance,(pos, dir))) (neighbors m next)
             bh :  BinaryHeap (Int,((Int,Int),(Int,Int))) = deleteMin unvisited
@@ -212,7 +214,9 @@ dijkstra2 m unvisited pathMap =
             betterPathMaps : List (SortedMap (Int, Int) (List (List (Int, Int)))) = concatMap (\n => map (\thisPath => 
                 let currentPaths = fromMaybe [] (lookup n pathMap)
                     firstPath = if (isNil currentPaths) then "" else renderPath m (ne head (currentPaths)) in
-                (trace $ show distance ++ " - " ++ show n ++ " - " ++ show (length currentPaths) ++ " - best cost - " ++ show statuses ++ " - best: \n" ++ firstPath ++ "\n" ++ (renderPath m (n::thisPath))) $ 
+                --(trace $ show distance
+                -- ++ " - " ++ show n ++ " - " ++ show (length currentPaths) ++ " - best cost - " ++ show statuses ++ " - best: \n" ++ firstPath ++ "\n" ++ (renderPath m (n::thisPath))
+                --) $ 
                 (singleton n [n::thisPath])) pathsTakenHere) betterPaths
             betterPathMap = foldl (mergeWith (++)) empty betterPathMaps
             additionalPathMaps = concatMap (\n => map (\thisPath => 
@@ -222,9 +226,77 @@ dijkstra2 m unvisited pathMap =
             additionalPathUpdatedMap = mergeWith (++) additionalPathMap pathMap
             betterPathUpdatedMap = mergeLeft betterPathMap additionalPathUpdatedMap
         in 
-        -- (trace $ show betterPaths ++ "\n") $ 
+        (trace $ show distance ++ "\n") $ 
         -- 0
         dijkstra2 m newUnvisited betterPathUpdatedMap
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- Node type: ((Int, Int), (Int, Int))
+-- Arguments:
+-- - m: character map for rendering/neighbor finding
+-- - unvisited: heap/priority queue, entries are (cost, unvisited vertex)
+-- - previous: key is vertex, value is (lowest cost to the vertex, all previous vertices that result in that cost)
+-- once heap is empty, we can return previous
+-- and then traverse the tree, backtracking from the end, then put that into a set and get the number of unique values
+partial dijkstraNew : SortedMap (Int, Int) Char -> BinaryHeap (Int,((Int, Int), (Int, Int))) -> SortedMap ((Int,Int),(Int,Int)) (Int, List ((Int,Int),(Int,Int))) -> SortedMap ((Int,Int),(Int,Int)) (Int, List ((Int,Int),(Int,Int)))
+dijkstraNew m [] previous = previous
+dijkstraNew m unvisited previous =
+    let (Just (distance,next)) = findMin unvisited
+        neighs : List (Int, ((Int, Int), (Int, Int))) = map (\(d,(pos,dir)) => (d+distance,(pos, dir))) (neighbors m next) -- all neighbors and their costs
+        newUnvisited = foldl decreaseKey (deleteMin unvisited) neighs -- updated priority queue (if cost is lower, update cost)
+        -- update the previous vertex map. for every neighbor: 
+        -- - if the cost is lower than the cost in the previous vertex map, set the list of previous vertices to just be this vertex
+        -- - if the cost is equal, add this vertex to the list of previous vertices
+        -- - if the cost is more, do nothing
+        newPrevious = foldl (\currentMap, (cost,neighbor) =>
+            let (currentCost, currentPreviousVertices) : (Int, List ((Int,Int),(Int,Int))) = fromMaybe (1000000000000000,[]) (lookup neighbor currentMap) in
+                --(trace $ show currentCost) $
+                if cost < currentCost then (insert neighbor (cost, [next]) currentMap)
+                else if cost == currentCost then (insert neighbor (cost, next :: currentPreviousVertices) currentMap)
+                else currentMap) previous neighs
+        in --(trace $ show next ++ " " ++ show (length unvisited)) $
+            dijkstraNew m newUnvisited newPrevious
+
+-- does not check for uniqueness yet
+backtrack : SortedMap ((Int,Int),(Int,Int)) (Int, List ((Int,Int),(Int,Int))) -> ((Int,Int),(Int,Int)) -> List ((Int,Int),(Int,Int))
+backtrack previous current = --(trace $ show current) $
+    let (_,previousVertices) = fromMaybe (1000000000000000,[]) (lookup current previous) in-- (trace $ show previousVertices) $
+        --if isNil previousVertices then [] else
+        concatMap (\vertex => vertex :: backtrack previous vertex) previousVertices
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 partial part2 : String -> Int
 part2 input =
@@ -237,11 +309,11 @@ part2 input =
         visitable = map (1000000000000000,) visitable'
         h' = ([(0,start)] ++ visitable)
         h : BinaryHeap (Int,((Int, Int), (Int, Int))) = foldl insert [] h'
-        pathMap = dijkstra2 m ([(0,start)] ++ visitable) (singleton (fst start) [])
-        endPaths = fromMaybe [] $ lookup end pathMap
-        endSquares = concat endPaths in (trace $ renderPath m endSquares ++ show endSquares ++ " " ++ show (length endSquares)) 2
+        previousMap = dijkstraNew m ([(0,start)] ++ visitable) (singleton start (0,[]))
+        allSquares = nub $ map fst $ backtrack previousMap (end,(1,0)) in 
+            -- (trace $ show end) 2
+            (trace $ renderPath m allSquares ++ " " ++ show (length allSquares)) 2
             --(trace $ show h ++ "\n\n" ++ show (decreaseKey h (1,((1, 5), (-1, 0))))) $
-            
 
 public export
 partial solve : Fin 2 -> String -> IO Int
