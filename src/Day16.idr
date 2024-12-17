@@ -117,7 +117,7 @@ decreaseKey2 (l,heap) (prio,val) =
         _ => (((EQ,0),fst val) :: l, heap)
 
 highlight : List Char -> List Char
-highlight s = ['O']--unpack ("\x1b" ++ "[43m" ++ (pack s) ++ "\x1b" ++ "[0m")
+highlight s = unpack ("\x1b" ++ "[43mO\x1b" ++ "[0m")
 
 renderPath : SortedMap (Int, Int) Char -> List (Int, Int) -> String
 renderPath m path = --"\x1b" ++ "c" ++
@@ -230,20 +230,6 @@ dijkstra2 m unvisited pathMap =
         -- 0
         dijkstra2 m newUnvisited betterPathUpdatedMap
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 -- Node type: ((Int, Int), (Int, Int))
 -- Arguments:
 -- - m: character map for rendering/neighbor finding
@@ -273,30 +259,9 @@ dijkstraNew m unvisited previous =
 -- does not check for uniqueness yet
 backtrack : SortedMap ((Int,Int),(Int,Int)) (Int, List ((Int,Int),(Int,Int))) -> ((Int,Int),(Int,Int)) -> List ((Int,Int),(Int,Int))
 backtrack previous current = --(trace $ show current) $
-    let (_,previousVertices) = fromMaybe (1000000000000000,[]) (lookup current previous) in-- (trace $ show previousVertices) $
+    let (_,previousVertices) = fromMaybe (0,[]) (lookup current previous) in-- (trace $ show previousVertices) $
         --if isNil previousVertices then [] else
         concatMap (\vertex => vertex :: backtrack previous vertex) previousVertices
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 partial part2 : String -> Int
 part2 input =
@@ -317,7 +282,9 @@ part2 input =
         -- same incorrect answer, let's try (1,0) (terminator) -- that crashed
         -- and (0,1) vscode -- gave correct answer
         -- NO SHOT I WAS OFF BY ONE
-        allSquares = nub $ map fst $ backtrack previousMap (end,(0,1)) in 
+
+        -- this is definitely one way to try all the directions (:
+        allSquares = (ne head) $ sortBy (compare `on` length) $ map (\dir => nub $ map fst $ backtrack previousMap (end,dir)) [(0,1),(0,-1),(1,0),(-1,0)] in 
             -- (trace $ show end) 2
             (trace $ renderPath m allSquares) (1 + cast (length allSquares))
             --(trace $ show h ++ "\n\n" ++ show (decreaseKey h (1,((1, 5), (-1, 0))))) $
