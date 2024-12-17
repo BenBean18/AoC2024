@@ -310,9 +310,11 @@ part2 input =
         h' = ([(0,start)] ++ visitable)
         h : BinaryHeap (Int,((Int, Int), (Int, Int))) = foldl insert [] h'
         previousMap = dijkstraNew m ([(0,start)] ++ visitable) (singleton start (0,[]))
-        allSquares = nub $ map fst $ backtrack previousMap (end,(1,0)) in 
+        -- the direction that it's facing at the end is very important. if we choose an existing direction,
+        -- the path gets a free turn. so if we choose up, there's nothing there and the incoming direction doesn't matter.
+        allSquares = nub $ map fst $ backtrack previousMap (end,(-1,0)) in 
             -- (trace $ show end) 2
-            (trace $ renderPath m allSquares ++ " " ++ show (length allSquares)) 2
+            (trace $ renderPath m allSquares) (1 + cast (length allSquares))
             --(trace $ show h ++ "\n\n" ++ show (decreaseKey h (1,((1, 5), (-1, 0))))) $
 
 public export
