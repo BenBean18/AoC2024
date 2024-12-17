@@ -310,12 +310,19 @@ part2 input =
         h' = ([(0,start)] ++ visitable)
         h : BinaryHeap (Int,((Int, Int), (Int, Int))) = foldl insert [] h'
         previousMap = dijkstraNew m ([(0,start)] ++ visitable) (singleton start (0,[]))
-        -- the direction that it's facing at the end is very important. if we choose an existing direction,
-        -- the path gets a free turn. so if we choose up, there's nothing there and the incoming direction doesn't matter.
-        allSquares = nub $ map fst $ backtrack previousMap (end,(-1,0)) in 
+        -- the direction that it's facing at the end is very important. if we choose another direction,
+        -- inefficient paths get one free turn because the efficient one has to turn.
+        -- (-1,0) for the direction worked on the example, because all of the incoming paths were going up.
+        -- analyzing this input, the only viable paths are to the left, so (0,-1) should work.
+        -- same incorrect answer, let's try (1,0) (terminator) -- that crashed
+        -- and (0,1) vscode -- gave correct answer
+        -- NO SHOT I WAS OFF BY ONE
+        allSquares = nub $ map fst $ backtrack previousMap (end,(0,1)) in 
             -- (trace $ show end) 2
             (trace $ renderPath m allSquares) (1 + cast (length allSquares))
             --(trace $ show h ++ "\n\n" ++ show (decreaseKey h (1,((1, 5), (-1, 0))))) $
+
+-- 564 too high
 
 public export
 partial solve : Fin 2 -> String -> IO Int
