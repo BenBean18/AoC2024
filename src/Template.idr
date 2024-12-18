@@ -9,6 +9,7 @@ import Utilities
 import Data.SortedMap
 import Data.SortedSet
 import Data.List1
+import Data.Vect
 
 -- Part 1
 
