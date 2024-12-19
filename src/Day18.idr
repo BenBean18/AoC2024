@@ -57,17 +57,50 @@ parseObstacle s = let (a::b::[]) = forget (split (==',') s) in (cast a, cast b)
 add1024Obstacles : List (Int,Int) -> SortedMap (Int, Int) Char -> SortedMap (Int, Int) Char
 add1024Obstacles l m = foldl addObstacle empty (take 1024 l)
 
+zeroTo70 : List Int
+zeroTo70 = [0..70]
+
 partial part1 : String -> Int
 part1 input =
     let obstacles = map parseObstacle (lines input)
         m = add1024Obstacles obstacles empty
-        visitable = tail $ map (the Int 1000000000000000,) (concatMap (\y => map (,y) [the Int 0..70]) [the Int 0..70])
+        visitable = tail $ map (the Int 100000000,) (concatMap (\y => map (,y) zeroTo70) zeroTo70)
         shortestPath = dijkstra m ([(0,(0,0))] ++ visitable) (70,70) in shortestPath
 
 -- Part 2
 
-part2 : String -> Int
-part2 input = 2
+-- we can binary search on the number of obstacles
+-- LETS GO THIS WILL BE FUN
+
+-- 1024-3000
+-- so (1024+3000)/2 = 2012 is next pick
+-- if unblocked and next is blocked, then the next obstacle's coordinates
+-- if unblocked and not, go higher with 2012-3000
+-- if blocked and previous is unblocked, then the current obstacle's coordinates
+-- if blocked and not, go lower with 1024-2011
+
+addNObstacles : List (Int,Int) -> SortedMap (Int, Int) Char -> Nat -> SortedMap (Int, Int) Char
+addNObstacles l m n = foldl addObstacle empty (take n l)
+
+partial binarySearch : List (Int,Int) -> SortedMap (Int, Int) Char -> BinaryHeap (Int,(Int,Int)) -> Int -> Int -> (Int,Int)
+binarySearch l m visitable lower upper =
+    let n = (lower + upper) `div` 2
+        prevBlocked = (dijkstra (addNObstacles l m ((cast n) `minus` 1)) visitable (70,70)) == 100000000
+        currentObstacle = (ne last) (take (cast n) l)
+        blocked = (dijkstra (addNObstacles l m (cast n)) visitable (70,70)) == 100000000
+        nextObstacle = (ne last) (take ((cast n)+1) l)
+        nextBlocked = (dijkstra (addNObstacles l m ((cast n)+1)) visitable (70,70)) == 100000000 in
+            if blocked && not prevBlocked then currentObstacle
+            else if blocked then binarySearch l m visitable lower n
+            else if not blocked && nextBlocked then nextObstacle
+            else if not blocked && not nextBlocked then binarySearch l m visitable n upper
+            else binarySearch l m visitable n upper -- shouldn't need this?
+
+partial part2 : String -> Int
+part2 input =
+    let obstacles = map parseObstacle (lines input)
+        visitable = tail $ map (the Int 100000000,) (concatMap (\y => map (,y) zeroTo70) zeroTo70)
+        (x,y) = binarySearch obstacles empty ([(0,(0,0))] ++ visitable) 1024 (cast (length obstacles)) in (trace $ show x ++ "," ++ show y) 2
 
 public export
 partial solve : Fin 2 -> String -> IO Int
