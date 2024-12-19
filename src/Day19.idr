@@ -12,7 +12,7 @@ import Data.List1
 import Data.Vect
 import Control.Monad.ST
 
--- Part 1
+-- Part 1: 1.270s
 
 -- this feels like combinatorics
 -- idk let's try brute force
@@ -40,7 +40,7 @@ memoize' f input = do
 
 isPossible : List String -> String -> SortedMap String Bool -> (Bool, SortedMap String Bool)
 isPossible l "" memo = (True, memo)
-isPossible l str memo = (trace $ show (length $ Data.SortedMap.toList memo)) $
+isPossible l str memo = -- (trace $ show (length $ Data.SortedMap.toList memo)) $
     case lookup str memo of
         Just b => (b,memo)
         Nothing =>
@@ -58,11 +58,11 @@ part1 input =
         m : SortedMap String Bool = empty
         results : (Int,SortedMap String Bool) = foldl (\(count,currentMemo), d => let (t,thisMemo) = isPossible patterns d currentMemo in (count + if t then 1 else 0, mergeLeft thisMemo currentMemo)) (the Int 0,m) designs in fst results
 
--- Part 2
+-- Part 2: 2.026s
 
 isPossible2 : List String -> String -> SortedMap String Int -> (Int, SortedMap String Int)
 isPossible2 l "" memo = (1, memo)
-isPossible2 l str memo = (trace $ show (length $ Data.SortedMap.toList memo)) $
+isPossible2 l str memo = -- (trace $ show (length $ Data.SortedMap.toList memo)) $
     case lookup str memo of
         Just b => (b,memo)
         Nothing =>
