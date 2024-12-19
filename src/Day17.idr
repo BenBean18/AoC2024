@@ -89,11 +89,11 @@ run r@(MkRegisters a b c ip) (6::combo::[]) = NoOutput (MkRegisters a (a `shiftR
 run r@(MkRegisters a b c ip) (7::combo::[]) = NoOutput (MkRegisters a b (a `shiftR` (restrict 63 (cast (parseCombo r combo)))) (ip + 2))
 
 runProgram : List Int -> Registers -> WithOutput Registers
-runProgram xs r@(MkRegisters a b c ip) = do
+runProgram xs r@(MkRegisters ra rb rc ip) = do
     case (map (restrict 7 . cast) $ take 2 (drop (cast ip) xs)) of
         (a :: b :: _) => do
             nextState <- run r (a::b::[])
-            runProgram xs nextState
+            (trace $ show ra ++ " " ++ show rb ++ " " ++ show rc) $ runProgram xs nextState
         -- (a :: b :: _) => run r (a::b::[]) >>= runProgram xs
         [_] => NoOutput r
         [] => NoOutput r
@@ -103,7 +103,7 @@ parseInput (a::b::c::_::program::xs) =
     let aVal : Int = cast ((ne last) (words a))
         bVal : Int = cast ((ne last) (words b))
         cVal : Int = cast ((ne last) (words c))
-        prgm : List Int = map cast (forget (split (== ',') program)) in (MkRegisters aVal bVal cVal 0, prgm)
+        prgm : List Int = map cast (forget (split (== ',') (concat ((ne tail) (words program))))) in (trace $ show aVal ++ "," ++ show bVal ++ "," ++ show cVal ++ "-" ++ show prgm) (MkRegisters aVal bVal cVal 0, prgm)
 
 partial part1 : String -> IO Int
 part1 input =
