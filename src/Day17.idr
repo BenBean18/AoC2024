@@ -25,10 +25,10 @@ record Registers where
 -- (>>=) : WithOutput Registers -> (Registers -> WithOutput Registers) -> WithOutput Registers
 -- Initializer: MkOutput "the output" CurrentState -> WithOutput StateType
 data WithOutput : (state : Type) -> Type where
-    MkOutput : String -> state -> WithOutput state
+    MkOutput : List Int -> state -> WithOutput state
 
 NoOutput : {state : Type} -> state -> WithOutput state
-NoOutput = MkOutput ""
+NoOutput = MkOutput []
 
 combineStrings : WithOutput a -> WithOutput b -> WithOutput b
 combineStrings (MkOutput s1 _) (MkOutput s2 state2) = MkOutput (s1 ++ s2) state2
@@ -39,7 +39,7 @@ Functor WithOutput where
 Applicative WithOutput where
     -- pure  : state -> WithOutput state
     -- if we just have a state, output should start as nothing
-    pure state = MkOutput "" state
+    pure state = MkOutput [] state
 
     -- (<*>) : WithOutput (stateType1 -> stateType2) -> WithOutput stateType1 -> WithOutput stateType2
     -- this kinda doesn't make any sense given the context, but uh ig just concatenate the outputs?
@@ -82,7 +82,7 @@ run r@(MkRegisters a b c ip) (3::literal::[]) = case a of
 -- bxc (bitwise or)
 run r@(MkRegisters a b c ip) (4::_::[]) = NoOutput (MkRegisters a (b `xor` c) c (ip + 2))
 -- out (mod 8)
-run r@(MkRegisters a b c ip) (5::combo::[]) = MkOutput (show ((parseCombo r combo) `mod` 8) ++ ",") (MkRegisters a b c (ip + 2))
+run r@(MkRegisters a b c ip) (5::combo::[]) = MkOutput [((parseCombo r combo) `mod` 8)] (MkRegisters a b c (ip + 2))
 -- bdv (division b)
 run r@(MkRegisters a b c ip) (6::combo::[]) = NoOutput (MkRegisters a (a `shiftR` (restrict 63 (cast (parseCombo r combo)))) c (ip + 2))
 -- cdv (division c)
@@ -93,7 +93,7 @@ runProgram xs r@(MkRegisters ra rb rc ip) = do
     case (map (restrict 7 . cast) $ take 2 (drop (cast ip) xs)) of
         (a :: b :: _) => do
             nextState <- run r (a::b::[])
-            (trace $ show ra ++ " " ++ show rb ++ " " ++ show rc) $ runProgram xs nextState
+            runProgram xs nextState
         -- (a :: b :: _) => run r (a::b::[]) >>= runProgram xs
         [_] => NoOutput r
         [] => NoOutput r
@@ -103,19 +103,32 @@ parseInput (a::b::c::_::program::xs) =
     let aVal : Int = cast ((ne last) (words a))
         bVal : Int = cast ((ne last) (words b))
         cVal : Int = cast ((ne last) (words c))
-        prgm : List Int = map cast (forget (split (== ',') (concat ((ne tail) (words program))))) in (trace $ show aVal ++ "," ++ show bVal ++ "," ++ show cVal ++ "-" ++ show prgm) (MkRegisters aVal bVal cVal 0, prgm)
+        prgm : List Int = map cast (forget (split (== ',') (concat ((ne tail) (words program))))) in (MkRegisters aVal bVal cVal 0, prgm)
 
 partial part1 : String -> IO Int
 part1 input =
     let (regs,prgm) = parseInput (lines input)
         (MkOutput out _) = runProgram prgm regs in do
-        putStrLn $ pack $ (ne init) (unpack out)
+        print out
         pure 0
 
--- Part 2
+-- Part 2: a quine!!
 
-part2 : String -> Int
-part2 input = 2
+isQuine : Int -> List Int -> Bool
+isQuine a program =
+    let (MkOutput out _) = runProgram program (MkRegisters a 0 0 0) in (trace $ show a ++ "->" ++ show out) $ program == out
+
+-- basically short circuiting map kinda
+findFirstQuine : Int -> List Int -> Int
+findFirstQuine a program = if isQuine a program then a else findFirstQuine (a + 1) program
+
+-- while I'm waiting for this to finish, let's think
+
+partial part2 : String -> Int
+part2 input =
+    let (regs,prgm) = parseInput (lines input) in 
+        findFirstQuine 105706275471360 prgm
+        -- let a = map ((flip isQuine) prgm) (map (\i => (the Int 105706258694144) + (the Int 16777216)*i) [0..6]) in (trace $ show a) 0
 
 public export
 partial solve : Fin 2 -> String -> IO Int

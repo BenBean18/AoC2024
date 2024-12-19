@@ -1,0 +1,205 @@
+2,4,1,5,7,5,1,6,0,3,4,3,5,5,3,0
+
+only 15 possible instruction combos:
+2,4: A mod 8 -> B
+4,1: B xor C -> B
+1,5: 
+5,7
+7,5
+5,1
+1,6
+6,0
+0,3
+3,4
+4,3
+3,5
+5,5
+5,3
+3,0
+
+5 is output, so these are the only possible outputs
+
+5,7 (N/A)
+5,1 (1)
+5,5 (B)
+5,3 (3)
+
+If there are only 15 possibilities, does that mean we can memoize or something?
+
+Looking at the output: 0=8^0-1eh adds a new digit (length 1), 8=8^1 adds a new digit (length 2), 64=8^2 adds a new digit (length 3), 512=8^3 adds a new digit (length 4), etc
+
+For length 16, that's 35184372088832 (8^15) to 281474976710655 (8^16) = 246290604621823 possibilities = NOT bruteforceable
+
+Also, if we are at 8^n and add 8^n, the last digit changes. Adding 8^(n-1) changes the second to last digit. Etc.
+
+Going right to left:
+
+Last digit:
+
+partial part2 : String -> Int
+part2 input =
+    let (regs,prgm) = parseInput (lines input) in 
+        -- findFirstQuine 0 prgm
+        let a = map ((flip isQuine) prgm) (map (\i => (the Int 35184372088832) + (the Int 35184372088832)*i) [0..6]) in (trace $ show a) 0
+
+35184372088832->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 3, 2]
+70368744177664->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 7, 3, 1]
+105553116266496->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 5, 3, 0] *
+140737488355328->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 5]
+175921860444160->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 2, 3]
+211106232532992->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 7, 2, 5]
+246290604621824->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 5, 2, 5]
+
+The last digit is a zero, so it must be between 105553116266496 and 140737488355328 inclusive.
+Next digit will be 8^14 = 4398046511104 added on
+
+partial part2 : String -> Int
+part2 input =
+    let (regs,prgm) = parseInput (lines input) in 
+        -- findFirstQuine 0 prgm
+        let a = map ((flip isQuine) prgm) (map (\i => (the Int 105553116266496) + (the Int 4398046511104)*i) [0..6]) in (trace $ show a) 0
+
+105553116266496->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 5, 3, 0] *
+109951162777600->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 5, 3, 0] *
+114349209288704->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 7, 5, 1, 0]
+118747255799808->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 5, 5, 0, 0]
+123145302310912->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 1, 0]
+127543348822016->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 4, 3, 0] *
+127543348822016->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 7, 4, 6, 0]
+
+The next digit must be a 3, so it must be between 105553116266496 and 114349209288703 inclusive, or 127543348822016 and 127543348822015 inclusive.
+Next digit will be 8^13 = 549755813888 added on
+
+First block. I'm noticing that it looks like everything defaults to starting at 3 until overwritten, so I'm only going to try this one for now and see if I can get it. This also enforces lowest possible:
+partial part2 : String -> Int
+part2 input =
+    let (regs,prgm) = parseInput (lines input) in 
+        -- findFirstQuine 0 prgm
+        let a = map ((flip isQuine) prgm) (map (\i => (the Int 105553116266496) + (the Int 549755813888)*i) [0..6]) in (trace $ show a) 0
+
+The next digit must be a 5.
+Next digit will be 8^12 = 68719476736 added on
+
+105553116266496->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 5, 3, 0] *
+106102872080384->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 3, 6, 3, 0]
+106652627894272->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 7, 3, 0, 3, 0]
+107202383708160->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 5, 3, 3, 3, 0]
+107752139522048->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 5, 3, 0] *
+108301895335936->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 2, 3, 3, 0]
+108851651149824->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 7, 2, 5, 3, 0] *
+
+Again, only trying first
+partial part2 : String -> Int
+part2 input =
+    let (regs,prgm) = parseInput (lines input) in 
+        -- findFirstQuine 0 prgm
+        let a = map ((flip isQuine) prgm) (map (\i => (the Int 105553116266496) + (the Int 68719476736)*i) [0..6]) in (trace $ show a) 0
+
+105553116266496->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 5, 3, 0]
+105621835743232->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 3, 2, 5, 3, 0]
+105690555219968->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 7, 3, 5, 5, 3, 0] *
+105759274696704->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 5, 3, 0, 5, 3, 0]
+105827994173440->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 5, 5, 3, 0] * 
+105896713650176->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 2, 3, 5, 3, 0]
+105965433126912->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 7, 2, 5, 5, 3, 0] *
+
+The next digit must be a 5.
+Next digit will be 8^11 = 8589934592 added on
+
+partial part2 : String -> Int
+part2 input =
+    let (regs,prgm) = parseInput (lines input) in 
+        -- findFirstQuine 0 prgm
+        let a = map ((flip isQuine) prgm) (map (\i => (the Int 105690555219968) + (the Int 8589934592)*i) [0..6]) in (trace $ show a) 0
+
+105690555219968->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 7, 3, 5, 5, 3, 0] *
+105699145154560->[3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 7, 3, 5, 5, 3, 0] *
+105707735089152->[3, 3, 3, 3, 3, 3, 3, 3, 3, 7, 7, 1, 5, 5, 3, 0]
+105716325023744->[3, 3, 3, 3, 3, 3, 3, 3, 3, 5, 7, 0, 5, 5, 3, 0]
+105724914958336->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 6, 5, 5, 5, 3, 0]
+105733504892928->[3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 6, 3, 5, 5, 3, 0] *
+105742094827520->[3, 3, 3, 3, 3, 3, 3, 3, 3, 7, 6, 7, 5, 5, 3, 0]
+
+The next digit must be a 3. (...,3,5,5,3,0)
+Next digit will be 8^10 = 1073741824 added on
+
+partial part2 : String -> Int
+part2 input =
+    let (regs,prgm) = parseInput (lines input) in 
+        -- findFirstQuine 0 prgm
+        let a = map ((flip isQuine) prgm) (map (\i => (the Int 105690555219968) + (the Int 1073741824)*i) [0..6]) in (trace $ show a) 0
+
+105690555219968->[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 7, 3, 5, 5, 3, 0]
+105691628961792->[3, 3, 3, 3, 3, 3, 3, 3, 1, 3, 2, 3, 5, 5, 3, 0]
+105692702703616->[3, 3, 3, 3, 3, 3, 3, 3, 7, 3, 0, 3, 5, 5, 3, 0]
+105693776445440->[3, 3, 3, 3, 3, 3, 3, 3, 5, 3, 2, 3, 5, 5, 3, 0]
+105694850187264->[3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 5, 3, 5, 5, 3, 0]
+105695923929088->[3, 3, 3, 3, 3, 3, 3, 3, 1, 2, 3, 3, 5, 5, 3, 0]
+105696997670912->[3, 3, 3, 3, 3, 3, 3, 3, 7, 2, 5, 3, 5, 5, 3, 0]
+
+The next digit must be a 4. (...,4,3,5,5,3,0)
+
+Which means we took a wrong path somewhere. Let's go up one and start at 
+(note: this is right, we want to find the lowest so when searching through the kinda graph just choose lowest at each level and go up one if wrong)
+
+partial part2 : String -> Int
+part2 input =
+    let (regs,prgm) = parseInput (lines input) in 
+        -- findFirstQuine 0 prgm
+        let a = map ((flip isQuine) prgm) (map (\i => (the Int 105699145154560) + (the Int 1073741824)*i) [0..6]) in (trace $ show a) 0
+
+105699145154560->[3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 7, 3, 5, 5, 3, 0]
+105700218896384->[3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 2, 3, 5, 5, 3, 0]
+105701292638208->[3, 3, 3, 3, 3, 3, 3, 3, 7, 1, 0, 3, 5, 5, 3, 0]
+105702366380032->[3, 3, 3, 3, 3, 3, 3, 3, 5, 1, 2, 3, 5, 5, 3, 0]
+105703440121856->[3, 3, 3, 3, 3, 3, 3, 3, 3, 0, 1, 3, 5, 5, 3, 0]
+105704513863680->[3, 3, 3, 3, 3, 3, 3, 3, 1, 0, 3, 3, 5, 5, 3, 0]
+105705587605504->[3, 3, 3, 3, 3, 3, 3, 3, 7, 0, 4, 3, 5, 5, 3, 0] *
+
+Down one again, to repeat The next digit must be a 4. (...,4,3,5,5,3,0)
+so 8^9 = 134217728 added on
+
+partial part2 : String -> Int
+part2 input =
+    let (regs,prgm) = parseInput (lines input) in 
+        -- findFirstQuine 0 prgm
+        let a = map ((flip isQuine) prgm) (map (\i => (the Int 105705587605504) + (the Int 134217728)*i) [0..6]) in (trace $ show a) 0
+
+105705587605504->[3, 3, 3, 3, 3, 3, 3, 3, 7, 0, 4, 3, 5, 5, 3, 0]
+105705721823232->[3, 3, 3, 3, 3, 3, 3, 1, 7, 5, 4, 3, 5, 5, 3, 0]
+105705856040960->[3, 3, 3, 3, 3, 3, 3, 7, 7, 1, 4, 3, 5, 5, 3, 0]
+105705990258688->[3, 3, 3, 3, 3, 3, 3, 5, 7, 1, 4, 3, 5, 5, 3, 0]
+105706124476416->[3, 3, 3, 3, 3, 3, 3, 3, 6, 5, 4, 3, 5, 5, 3, 0]
+105706258694144->[3, 3, 3, 3, 3, 3, 3, 1, 6, 3, 4, 3, 5, 5, 3, 0] *
+105706392911872->[3, 3, 3, 3, 3, 3, 3, 7, 6, 3, 4, 3, 5, 5, 3, 0] *
+
+The next digit must be a 3. (...,3,4,3,5,5,3,0)
+so 8^8 = 16777216 added on
+
+partial part2 : String -> Int
+part2 input =
+    let (regs,prgm) = parseInput (lines input) in 
+        -- findFirstQuine 0 prgm
+        let a = map ((flip isQuine) prgm) (map (\i => (the Int 105706258694144) + (the Int 16777216)*i) [0..6]) in (trace $ show a) 0
+
+105706258694144->[3, 3, 3, 3, 3, 3, 3, 1, 6, 3, 4, 3, 5, 5, 3, 0]
+105706275471360->[3, 3, 3, 3, 3, 3, 1, 1, 0, 3, 4, 3, 5, 5, 3, 0] *
+105706292248576->[3, 3, 3, 3, 3, 3, 7, 1, 6, 3, 4, 3, 5, 5, 3, 0]
+105706309025792->[3, 3, 3, 3, 3, 3, 5, 1, 6, 3, 4, 3, 5, 5, 3, 0]
+105706325803008->[3, 3, 3, 3, 3, 3, 3, 0, 1, 3, 4, 3, 5, 5, 3, 0]
+105706342580224->[3, 3, 3, 3, 3, 3, 1, 0, 3, 3, 4, 3, 5, 5, 3, 0]
+105706359357440->[3, 3, 3, 3, 3, 3, 7, 0, 0, 3, 4, 3, 5, 5, 3, 0] *
+
+The next digit must be a 0. (...,0,3,4,3,5,5,3,0)
+so 8^7 = 2097152 added on, which is actually brute forceable starting at 105706275471360
+
+partial part2 : String -> Int
+part2 input =
+    let (regs,prgm) = parseInput (lines input) in 
+        findFirstQuine 105706275471360 prgm
+
+It returned 105706277661082 after 27 seconds
+
+And that answer is correct :)
+
+Time to actually write it now instead of by inspection though :)
