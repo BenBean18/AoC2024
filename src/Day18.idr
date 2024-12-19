@@ -84,7 +84,7 @@ addNObstacles l m n = foldl addObstacle empty (take n l)
 
 partial binarySearch : List (Int,Int) -> SortedMap (Int, Int) Char -> BinaryHeap (Int,(Int,Int)) -> Int -> Int -> (Int,Int)
 binarySearch l m visitable lower upper =
-    let n = (lower + upper) `div` 2
+    let n = (trace $ show lower ++ "-" ++ show upper) $ (lower + upper) `div` 2
         prevBlocked = (dijkstra (addNObstacles l m ((cast n) `minus` 1)) visitable (70,70)) == 100000000
         currentObstacle = (ne last) (take (cast n) l)
         blocked = (dijkstra (addNObstacles l m (cast n)) visitable (70,70)) == 100000000
