@@ -60,8 +60,24 @@ part1 input =
 
 -- Part 2
 
-part2 : String -> Int
-part2 input = 2
+isPossible2 : List String -> String -> SortedMap String Int -> (Int, SortedMap String Int)
+isPossible2 l "" memo = (1, memo)
+isPossible2 l str memo = (trace $ show (length $ Data.SortedMap.toList memo)) $
+    case lookup str memo of
+        Just b => (b,memo)
+        Nothing =>
+            let possibles = filter (`isPrefixOf` str) l
+                trimmed = map (\p => pack (drop (length p) (unpack str))) possibles
+                (result,newMemo) = foldl (\(count,currentMemo), elem => 
+                    let (nextCount, nextMemo) = isPossible2 l elem currentMemo in
+                        (count + nextCount, nextMemo)) (0,memo) trimmed in -- yeah it returns the next one, don't merge, merge slows things down (I had `mergeLeft nextMemo currentMemo` before)
+                    (result, insert str result newMemo)
+
+partial part2 : String -> Int
+part2 input =
+    let (patterns, designs) = parseInput (lines input)
+        m : SortedMap String Int = empty
+        results : (Int,SortedMap String Int) = foldl (\(count,currentMemo), d => let (t,thisMemo) = isPossible2 patterns d currentMemo in (count + t, mergeLeft thisMemo currentMemo)) (the Int 0,m) designs in fst results
 
 public export
 partial solve : Fin 2 -> String -> IO Int
