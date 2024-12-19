@@ -38,13 +38,16 @@ memoize' f input = do
             (trace $ "inserted " ++ show input) $ modifySTRef memoRef (insert input output)
             pure output
 
-isPossible : List String -> String -> Bool
-isPossible l "" =True
-isPossible l s = 
-    let possibles = filter (`isPrefixOf` s) l
-        trimmed = map (\p => pack (drop (length p) (unpack s))) possibles in 
-            --any (isPossible l) trimmed
-            foldl (\done, elem => if done then True else isPossible l elem) False trimmed
+isPossible : List String -> String -> SortedMap String Bool -> (Bool, SortedMap String Bool)
+isPossible l "" memo = (True, memo)
+isPossible l str memo = (trace $ show (length $ Data.SortedMap.toList memo)) $
+    case lookup str memo of
+        Just b => (b,memo)
+        Nothing =>
+            let possibles = filter (`isPrefixOf` str) l
+                trimmed = map (\p => pack (drop (length p) (unpack str))) possibles
+                (result,newMemo) = foldl (\(done,currentMemo), elem => if done then (True,currentMemo) else isPossible l elem currentMemo) (False,memo) trimmed in
+                    (result, insert str result newMemo)
 
 partial parseInput : List String -> (List String, List String)
 parseInput (patterns::_::rest) = (filter (/= "") (forget (split (\a => a == ',' || a == ' ') patterns)), rest)
@@ -52,7 +55,8 @@ parseInput (patterns::_::rest) = (filter (/= "") (forget (split (\a => a == ',' 
 partial part1 : String -> Int
 part1 input =
     let (patterns, designs) = parseInput (lines input)
-        possibleDesigns : List String = filter (\d => (trace d) $ isPossible patterns d) designs in cast (length possibleDesigns)
+        m : SortedMap String Bool = empty
+        results : (Int,SortedMap String Bool) = foldl (\(count,currentMemo), d => let (t,thisMemo) = isPossible patterns d currentMemo in (count + if t then 1 else 0, mergeLeft thisMemo currentMemo)) (the Int 0,m) designs in fst results
 
 -- Part 2
 
