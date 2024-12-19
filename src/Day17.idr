@@ -10,6 +10,7 @@ import Data.SortedMap
 import Data.SortedSet
 import Data.List1
 import Data.Vect
+import Data.Bits
 
 -- Part 1
 
@@ -25,6 +26,9 @@ record Registers where
 -- Initializer: MkOutput "the output" CurrentState -> WithOutput StateType
 data WithOutput : (state : Type) -> Type where
     MkOutput : String -> state -> WithOutput state
+
+NoOutput : {state : Type} -> state -> WithOutput state
+NoOutput = MkOutput ""
 
 combineStrings : WithOutput a -> WithOutput b -> WithOutput b
 combineStrings (MkOutput s1 _) (MkOutput s2 state2) = MkOutput (s1 ++ "," ++ s2) state2
@@ -52,8 +56,13 @@ data Parity : Nat -> Type where
     Odd  : {n : _} -> Parity (S (n + n))
 
 -- force even number
-Program : Nat -> Type
-Program n = Vect (n + n) (Fin 8)
+data EvenVect : Nat -> Type -> Type where
+    Empty : {n : Nat = Z} -> {ty : Type} -> EvenVect 0 ty
+    FirstTwo : {k : Nat} -> {ty : Type} -> ty -> ty -> Vect (k + k) ty -> EvenVect (S k) ty
+
+Foldable (EvenVect n) where
+    foldr f e Empty = e
+    foldr f e (FirstTwo a b xs) = foldr f e (a::b::xs)
 
 -- lemma : (left : Nat) -> (right : Nat) -> Vect (S (S (left + right))) (Fin 8) = Vect (S (left + S right)) (Fin 8)
 -- lemma left right = rewrite plusSuccRightSucc left right in Refl
@@ -67,32 +76,33 @@ lemma2 k = rewrite plusSuccRightSucc k k in Refl
 lemma3 : (k : Nat) -> S k + S k = S (k + (S k))
 lemma3 k = rewrite lemma2 k in Refl
 
-firstTwo : {k : Nat} -> Fin 8 -> Fin 8 -> Program k -> Program (S k)
-firstTwo a b xs =
-    let toAdd : Program 1 = (a :: b :: [])
-        -- Can't solve constraint between: S (plus 0 (k + k)) and plus k (S k)
-        result : Vect (S (S (k + k))) (Fin 8) = toAdd ++ xs
-        result' : Vect (S (k + (S k))) (Fin 8) = rewrite lemma1 k in result
-        result'' : Vect (S k + S k) (Fin 8) = rewrite lemma3 k in result' in result''
+parseCombo : Registers -> Fin 8 -> Int
+parseCombo (MkRegisters a b c ip) 7 = 0
+parseCombo (MkRegisters a b c ip) 6 = c
+parseCombo (MkRegisters a b c ip) 5 = b
+parseCombo (MkRegisters a b c ip) 4 = a
+parseCombo (MkRegisters a b c ip) k = cast (finToNat k)
 
-run : {n : Nat} -> Registers -> Program n -> WithOutput Registers
-run {n=0} r [] = MkOutput "" r
+run : {n : Nat} -> Registers -> EvenVect n (Fin 8) -> WithOutput Registers
+run r Empty = MkOutput "" r
 -- adv (division a)
-run {n=(S k)} (MkRegisters a b c ip) (firstTwo 0 combo xs) = ?hole
--- -- bxl (bitwise or)
--- run {n=(S k)} (MkRegisters a b c ip) (1::literal::xs) = run (MkRegisters a b c ip) xs
--- -- bst (mod 8)
--- run {n=(S k)} (MkRegisters a b c ip) (2::combo::xs) = run (MkRegisters a b c ip) xs
--- -- jnz (jump if nonzero)
--- run {n=(S k)} (MkRegisters a b c ip) (3::literal::xs) = run (MkRegisters a b c ip) xs
--- -- bxc (bitwise or)
--- run {n=(S k)} (MkRegisters a b c ip) (4::_::xs) = run (MkRegisters a b c ip) xs
--- -- out
--- run {n=(S k)} (MkRegisters a b c ip) (5::combo::xs) = run (MkRegisters a b c ip) xs
--- -- bdv (division b)
--- run {n=(S k)} (MkRegisters a b c ip) (6::combo::xs) = run (MkRegisters a b c ip) xs
--- -- cdv (division c)
--- run {n=(S k)} (MkRegisters a b c ip) (7::combo::xs) = run (MkRegisters a b c ip) xs
+-- this is a bitshift right: "The numerator is the value in the A register. The denominator is found by raising 2 to the power of the instruction's combo operand."
+run r@(MkRegisters a b c ip) (FirstTwo 0 combo xs) = NoOutput (MkRegisters (a `shiftR` (restrict 63 (cast (parseCombo r combo)))) b c (ip + 2))
+-- bxl (bitwise or)
+run r@(MkRegisters a b c ip) (FirstTwo 1 literal xs) = NoOutput (MkRegisters a (b `xor` (cast (finToInteger literal))) c (ip + 2))
+-- bst (mod 8)
+run r@(MkRegisters a b c ip) (FirstTwo 2 combo xs) = ?hole2
+-- jnz (jump if nonzero)
+run r@(MkRegisters a b c ip) (FirstTwo 3 literal xs) = ?hole3
+-- bxc (bitwise or)
+run r@(MkRegisters a b c ip) (FirstTwo 4 _ xs) = ?hole4
+-- out
+run r@(MkRegisters a b c ip) (FirstTwo 5 combo xs) = ?hole5
+-- bdv (division b)
+run r@(MkRegisters a b c ip) (FirstTwo 6 combo xs) = ?hole6
+-- cdv (division c)
+run r@(MkRegisters a b c ip) (FirstTwo 7 combo xs) = ?hole7
+run r@(MkRegisters _ _ _ _) (FirstTwo _ _ _) = ?run_missing_case_1 -- should not need to exist?? we've covered all of the 8 cases
 
 part1 : String -> Int
 part1 input = 1
