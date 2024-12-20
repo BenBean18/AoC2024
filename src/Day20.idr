@@ -51,6 +51,7 @@ decreaseKey heap (prio,val) =
                 upped
         _ => heap
 
+-- should use memoization to get distances we've already computed, redoing the same path numerous times
 -- ideally use a min-heap but this could be fast enough maybe
 -- but...having 4 nodes for every point seems extremely inefficient...
 partial dijkstra : SortedMap (Int, Int) Char -> BinaryHeap (Int,(Int,Int)) -> (Int, Int) -> Int
@@ -67,6 +68,12 @@ dijkstra m unvisited end =
                 -- 0
                 dijkstra m newUnvisited end
 
+partial bfs : SortedMap (Int, Int) Char -> SortedSet (Int, Int) -> (Int, Int) -> (Int, Int) -> Int -> Int
+bfs m visited current end cost = 
+    if current == end then cost
+    else if current `contains` visited then 0 else
+    sum (map (\n => bfs m (insert current visited) n end (cost + 1)) (neighbors m current))
+
 separatedByOneWall : SortedMap (Int, Int) Char -> (Int, Int) -> List ((Int, Int),(Int, Int))
 separatedByOneWall m pos = if (fromMaybe '#' (lookup pos m)) == '#' then [] else
     let neighborPairs : List ((Int,Int), (Int,Int)) = zip (neighbors1 pos) (neighbors2 pos) -- (pos1,pos2)
@@ -80,7 +87,10 @@ findCheats m visitable =
     let l = keys m
         possibleCheats = concatMap (separatedByOneWall m) l
         -- -2 since we still have to go through wall
-        timeSaved = map (\(a,b) => ((-2) + dijkstra m ((0,a)::visitable) b, (a,b))) possibleCheats in --(trace $ show possibleCheats) 
+        timeSaved = map (\(a,b) => (trace $ show (a,b)) ((-2) + 
+            --dijkstra m ((0,a)::visitable) b, (a,b)
+            bfs m empty a b 0, (a,b)
+            )) possibleCheats in --(trace $ show possibleCheats) 
         timeSaved
 
 partial part1 : String -> Int
@@ -92,6 +102,8 @@ part1 input =
         visitable = map (1000000000000000,) visitable'
         cheats = findCheats m visitable
         good = filter (>=the Int 100) (map fst cheats) in cast (length good)
+
+-- 3012 is wrong
 
 -- Part 2
 
