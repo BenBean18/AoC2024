@@ -166,8 +166,11 @@ pathsOfLength l n = if (length l) < n then [] else
         path = (ne tail) l
         end = (ne last) path' in (start,end) :: pathsOfLength path n
 
+manhattanDist : (Int, Int) -> (Int, Int) -> Int
+manhattanDist (y1,x1) (y2,x2) = (abs (y2-y1)) + (abs (x2-x1))
+
 timeSaved : SortedMap (Int, Int) Char -> List (Int, Int) -> Nat -> List Int
-timeSaved m path n = map (\(start, end) => (trace $ show start ++ " " ++ show end) $ (cast n) - (bfs' m empty start end 0)) (pathsOfLength path n)
+timeSaved m path n = (trace $ show n) $ map (\(start, end) => (cast n) - (manhattanDist start end) - 1) (pathsOfLength path n)
 
 part2 : String -> Int
 part2 input = 
@@ -175,7 +178,7 @@ part2 input =
         l : List ((Int, Int), Char) = toList m
         path = findPath m
         cheatTimes = concatMap (timeSaved m path) [102..(length path)]
-        good = filter (>=the Int 100) cheatTimes in cast (length good)
+        good = filter (>=the Int 100) cheatTimes in (trace $ show (sort good)) $ cast (length good)
 
 public export
 partial solve : Fin 2 -> String -> IO Int
