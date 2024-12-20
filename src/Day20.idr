@@ -78,7 +78,7 @@ separatedByOneWall : SortedMap (Int, Int) Char -> (Int, Int) -> List ((Int, Int)
 separatedByOneWall m pos = if (fromMaybe '#' (lookup pos m)) == '#' then [] else
     let neighborPairs : List ((Int,Int), (Int,Int)) = zip (neighbors1 pos) (neighbors2 pos) -- (pos1,pos2)
         lookedUp : List (Char,Char) = zip (map (\k => fromMaybe '?' (lookup k m)) (neighbors1 pos)) (map (\k => fromMaybe '?' (lookup k m)) (neighbors2 pos)) -- (val1,val2)
-        paired' : List (((Int,Int), (Int,Int)),(Char,Char)) = filter (\(_,chars) => chars == ('#','.')) (zip neighborPairs lookedUp)
+        paired' : List (((Int,Int), (Int,Int)),(Char,Char)) = filter (\(_,chars) => chars == ('#','.') || chars == ('#','S') || chars == ('#','E')) (zip neighborPairs lookedUp)
         wallThenNot : List ((Int,Int), (Int,Int)) = map fst paired'
         pairs : List ((Int,Int), (Int,Int)) = map (pos,) (map snd wallThenNot) in pairs
 
@@ -101,9 +101,13 @@ part1 input =
         visitable' : List (Int,Int) = (map fst visitable'')
         visitable = map (1000000000000000,) visitable'
         cheats = findCheats m visitable
-        good = filter (>=the Int 100) (map fst cheats) in cast (length good)
+        good = filter (>=the Int 100) (map fst cheats) in (trace $ show (sort (map fst cheats))) $ ((cast (length good)) `div` 2) -- double counting, so just divide by 2, perfect lol
+        -- had to add start and end to double count correctly
 
 -- 3012 is wrong
+-- 1506 is also wrong (thought I was counting by x2)
+
+-- 1507 is right, runtime: "real	2m38.923s" uhhhhhhh
 
 -- Part 2
 
