@@ -111,8 +111,71 @@ part1 input =
 
 -- Part 2
 
+-- wait this is like pathing along the wall
+-- as well as through the track
+-- seems like memoization helps here? idk
+-- there appears to be only one path (of length ~9500 on real input) through the entire racetrack
+-- so we need to consider all paths of length 102 (cheat of length 2)-120 (cheat of length 20)
+-- if it's 7 long and we want paths of 3, there are abcdefg -> abc,bcd,cde,def,efg. so (length of entire thing) - (length of path) + 1 combos
+-- 188000 possible cheats to check........checking 13972 took 2.5 minutes.
+-- except it's not as bad since we only need to check the length of the wall path
+-- and really, "cheating" is just ignoring obstacles/all moves within the map are valid
+-- remember: same start and end = same cheat
+-- store as (time saved, (start, end)) in a set
+
+-- only filtering to confirm in list
+neighbors' : SortedMap (Int, Int) Char -> (Int,Int) -> List (Int,Int)
+neighbors' m pos = filter (\p => '?' /= (fromMaybe '?' (lookup p m))) (neighbors1 pos)
+
+-- again, ignores walls
+bfs' : SortedMap (Int, Int) Char -> SortedSet (Int, Int) -> (Int, Int) -> (Int, Int) -> Int -> Int
+bfs' m visited current end 20 = 0
+bfs' m visited current end cost =
+    if current == end then cost
+    else if current `contains` visited then 0 else
+    sum (map (\n => bfs' m (insert current visited) n end (cost + 1)) (neighbors' m current))
+
+bfsPath : SortedMap (Int, Int) Char -> List (Int, Int) -> (Int, Int) -> (Int, Int) -> List (Int,Int)
+bfsPath m visited current end = 
+    if current == end then visited
+    else if current `elem` visited then [] else
+    concatMap (\n => bfsPath m (visited++[current]) n end) (neighbors m current) -- only one path so this is fine
+
+findPath : SortedMap (Int, Int) Char -> List (Int, Int)
+findPath m =
+    let l : List ((Int, Int), Char) = toList m
+        start : (Int,Int) = (fst $ ne head $ (filter (\(k,v) => v == 'S') l))
+        end : (Int,Int) = (fst $ ne head $ (filter (\(k,v) => v == 'E') l)) in bfsPath m [] start end
+
+highlight : List Char -> List Char
+highlight s = unpack ("\x1b" ++ "[43mO\x1b" ++ "[0m")
+
+renderPath : SortedMap (Int, Int) Char -> List (Int, Int) -> String
+renderPath m path = --"\x1b" ++ "c" ++
+    let s = sort (keys m)
+        (maxY, maxX) = ne last s
+        (minY, minX) = ne head s
+        toRender = map (\y => pack $ concatMap (\x => 
+            let str: List Char = [(fromMaybe ' ') (lookup (cast y,cast x) m)] in
+                if (y,x) == (ne head) path then ['X'] else if (y,x) `elem` path then highlight str else str) [minX..maxX]) [minY..maxY] in unlines toRender
+
+pathsOfLength : List (Int, Int) -> Nat -> List ((Int,Int),(Int,Int))
+pathsOfLength l n = if (length l) < n then [] else
+    let path' = take n l
+        start = (ne head) path'
+        path = (ne tail) l
+        end = (ne last) path' in (start,end) :: pathsOfLength path n
+
+timeSaved : SortedMap (Int, Int) Char -> List (Int, Int) -> Nat -> List Int
+timeSaved m path n = map (\(start, end) => (trace $ show start ++ " " ++ show end) $ (cast n) - (bfs' m empty start end 0)) (pathsOfLength path n)
+
 part2 : String -> Int
-part2 input = 2
+part2 input = 
+    let m = twoDStringToMap input
+        l : List ((Int, Int), Char) = toList m
+        path = findPath m
+        cheatTimes = concatMap (timeSaved m path) [102..(length path)]
+        good = filter (>=the Int 100) cheatTimes in cast (length good)
 
 public export
 partial solve : Fin 2 -> String -> IO Int
