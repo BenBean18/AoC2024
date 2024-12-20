@@ -123,18 +123,6 @@ part1 input =
 -- remember: same start and end = same cheat
 -- store as (time saved, (start, end)) in a set
 
--- only filtering to confirm in list
-neighbors' : SortedMap (Int, Int) Char -> (Int,Int) -> List (Int,Int)
-neighbors' m pos = filter (\p => '?' /= (fromMaybe '?' (lookup p m))) (neighbors1 pos)
-
--- again, ignores walls
-bfs' : SortedMap (Int, Int) Char -> SortedSet (Int, Int) -> (Int, Int) -> (Int, Int) -> Int -> Int
-bfs' m visited current end 20 = 0
-bfs' m visited current end cost =
-    if current == end then cost
-    else if current `contains` visited then 0 else
-    sum (map (\n => bfs' m (insert current visited) n end (cost + 1)) (neighbors' m current))
-
 bfsPath : SortedMap (Int, Int) Char -> List (Int, Int) -> (Int, Int) -> (Int, Int) -> List (Int,Int)
 bfsPath m visited current end = 
     if current == end then visited
@@ -172,13 +160,18 @@ manhattanDist (y1,x1) (y2,x2) = (abs (y2-y1)) + (abs (x2-x1))
 timeSaved : SortedMap (Int, Int) Char -> List (Int, Int) -> Nat -> List Int
 timeSaved m path n = (trace $ show n) $ map (\(start, end) => (cast n) - (manhattanDist start end) - 1) (pathsOfLength path n)
 
+-- wait checking from start to end doesn't work
+-- because a path of length 25 from start to end could involve 5 along the actual path at the end for example
+-- better idea (in talking) could be to go along the path and look for all other dots within range, then lookup indices to see what the "normal" distance is compared to how much saved
+
 part2 : String -> Int
 part2 input = 
     let m = twoDStringToMap input
         l : List ((Int, Int), Char) = toList m
         path = findPath m
-        cheatTimes = concatMap (timeSaved m path) [102..(length path)]
-        good = filter (>=the Int 100) cheatTimes in (trace $ show (sort good)) $ cast (length good)
+        indexMap : SortedMap (Int, Int) Int = fromList (zip path (map cast [0..(length path `minus` 1)]))
+        cheatTimes = concatMap (timeSaved m path) [1..(length path)]
+        good = filter (>=the Int 50) cheatTimes in (trace $ show (sort good)) $ cast (length good)
 
 public export
 partial solve : Fin 2 -> String -> IO Int
