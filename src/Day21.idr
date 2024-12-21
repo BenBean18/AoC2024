@@ -139,7 +139,7 @@ neighbors' : (Int, Int) -> List (Int, Int)
 neighbors' j = map (Utilities.(+) j) [(0,1),(0,-1),(1,0),(-1,0)]
 
 partial shortestPresses : List Char -> (Char -> (Int, Int), (Int, Int) -> Maybe Char, List (Int, Int)) -> (Int, Int) -> List (List Char)
-shortestPresses [] _ _ = [['A']]
+shortestPresses [] _ _ = [[]]
 shortestPresses (nextPress::presses) (charToCoord, coordToChar, allCoords) currentPos =
     let nextPos = charToCoord nextPress
         neighbors : (Int, Int) -> List (Int, Int) = (.) (filter (isJust . coordToChar)) neighbors' -- woooooo point free that was cool
@@ -150,17 +150,21 @@ shortestPresses (nextPress::presses) (charToCoord, coordToChar, allCoords) curre
         movesForAllPaths = map (\poses => zipWith (-) ((ne init) poses) ((ne tail) poses)) posesForAllPaths
         charMovesForAllPaths = map (\moves => map directionOf' moves) movesForAllPaths in concatMap (\charMoves => map (charMoves ++ ['A'] ++) (shortestPresses presses (charToCoord, coordToChar, allCoords) nextPos)) charMovesForAllPaths
 
--- correct shortest length, same path as example
 partial test : List (List Char)
 test = shortestPresses (unpack "029A") (numericKeypad, numericKeypad', numericKeypadCoords) (3,2)
 
--- correct shortest length, different path as example
--- partial test2 : List (List Char)
--- test2 = map (\t => shortestPresses t (directionalKeypad, directionalKeypad', directionalKeypadCoords) (0,2)) test
+partial test2 : List (List Char)
+test2 = 
+    let sorted = sortBy (compare `on` length) $ concatMap (\t => shortestPresses t (directionalKeypad, directionalKeypad', directionalKeypadCoords) (0,2)) test
+        minLength = length ((ne head) sorted) in filter ((.) ((==) minLength) length) sorted
 
--- -- too long and different path
--- partial test3 : List Char
--- test3 = shortestPresses test2 (directionalKeypad, directionalKeypad', directionalKeypadCoords) (0,2)
+partial test3 : List (List Char)
+test3 =
+    let sorted = sortBy (compare `on` length) $ concatMap (\t => shortestPresses t (directionalKeypad, directionalKeypad', directionalKeypadCoords) (0,2)) test2
+        minLength = length ((ne head) sorted) in filter ((.) ((==) minLength) length) sorted
+
+partial resultHopefully : Nat
+resultHopefully = length ((ne head) test3)
 
 -- I think what's happening is because there are multiple shortest paths, we have to try them all (one could be more efficient to push at a higher level)
 
