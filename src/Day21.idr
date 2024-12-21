@@ -96,37 +96,40 @@ directionalKeypadCoords = (0,1) :: (0,2) :: (1,0) :: (1,1) :: (1,2) :: []
 -- Need to press A after getting to each position
 -- We need to find the shortest path between pairs of coordinates
 -- hello Edsger, I think I'll be using your algorithm again
-decreaseKey : Eq a => Ord a => Show a => BinaryHeap (Int,a,a) -> (Int,a,a) -> BinaryHeap (Int,a,a)
+decreaseKey : Eq a => Ord a => Show a => BinaryHeap (Int,a,List a) -> (Int,a,List a) -> BinaryHeap (Int,a,List a)
 decreaseKey heap (prio,val,prev) = 
     case findIndex (\(_,v,_) => v == val) heap of
         (Just idx') =>
             let idx : Fin (length heap) = idx'
                 (currentPrio,currentVal,currentPrev) = index' heap idx
-                h : BinaryHeap (Int,a,a) = (replaceWhen (\(_,v,p) => v == val) (min currentPrio prio, val, if prio < currentPrio then prev else currentPrev) heap)
+                h : BinaryHeap (Int,a,List a) = (replaceWhen (\(_,v,p) => v == val) (min currentPrio prio, val, if prio < currentPrio then prev else if prio == currentPrio then prev ++ currentPrev else currentPrev) heap)
                 upped = (heapifyUp h (finToNat idx) {p2=believe_me (InBounds (finToNat idx) h)}) in 
                 upped
         _ => heap
 
-backtrack : SortedMap (Int,Int) (Int,Int) -> (Int,Int) -> List (Int,Int)
-backtrack previous current = --(trace $ show current) $
-    case lookup current previous of
-        Nothing => [current]
-        Just (-1,-1) => [current]
-        Just vertex => current :: backtrack previous vertex
+-- hmm so the original version of this function was right lol (it's right here)
+backtrack : Show a => SortedMap a (List a) -> a -> List (List a)
+backtrack previous current =
+    case (lookup current previous) of
+        Nothing => [[current]]
+        Just [] => [[current]]
+        Just previousVertices => concatMap (\p => 
+            map (\possiblePath => current :: possiblePath) -- add the current vertex onto those paths
+                (backtrack previous p) -- these are all of the paths to get to that vertex
+                    ) previousVertices
 
 -- there are few enough shortest paths that this should really be computed in advance and stored in a map
 -- we'll see how slow it is though before trying to do that
 -- need to reverse moves at end
-partial dijkstra : ((Int, Int) -> List (Int, Int)) -> BinaryHeap (Int,(Int,Int),(Int,Int)) -> SortedMap (Int, Int) (Int, Int) -> (Int, Int) -> SortedMap (Int, Int) (Int, Int)
+partial dijkstra : ((Int, Int) -> List (Int, Int)) -> BinaryHeap (Int,(Int,Int),List (Int,Int)) -> SortedMap (Int, Int) (List (Int, Int)) -> (Int, Int) -> SortedMap (Int, Int) (List (Int, Int))
 dijkstra _ [] _ _ = empty
 dijkstra neighbors unvisited predecessorMap end =
     let (Just (distance,next,prev)) = findMin unvisited in --(trace $ show (next,distance)) $
             if next == end then Data.SortedMap.insert next prev predecessorMap
             else
-                let neighs : List (Int, (Int, Int), (Int, Int)) = map (\n=>(distance+1,n,next)) (neighbors next)
+                let neighs : List (Int, (Int, Int), List (Int, Int)) = map (\n=>(distance+1,n,[next])) (neighbors next)
                     newUnvisited = foldl decreaseKey (deleteMin unvisited) neighs
                     newPredecessorMap = insert next prev predecessorMap
-
                 in 
                 --(trace $ show (map fst newUnvisited) ++ "\n\n\n") $ 
                 -- 0
@@ -135,25 +138,31 @@ dijkstra neighbors unvisited predecessorMap end =
 neighbors' : (Int, Int) -> List (Int, Int)
 neighbors' j = map (Utilities.(+) j) [(0,1),(0,-1),(1,0),(-1,0)]
 
-partial shortestPresses : List Char -> (Char -> (Int, Int), (Int, Int) -> Maybe Char, List (Int, Int)) -> (Int, Int) -> List Char
-shortestPresses [] _ _ = []
+partial shortestPresses : List Char -> (Char -> (Int, Int), (Int, Int) -> Maybe Char, List (Int, Int)) -> (Int, Int) -> List (List Char)
+shortestPresses [] _ _ = [['A']]
 shortestPresses (nextPress::presses) (charToCoord, coordToChar, allCoords) currentPos =
     let nextPos = charToCoord nextPress
         neighbors : (Int, Int) -> List (Int, Int) = (.) (filter (isJust . coordToChar)) neighbors' -- woooooo point free that was cool
         otherVisitable = filter (/= currentPos) allCoords
-        unvisited = (0,currentPos,(-1,-1)) :: (map (\p=>(1000,p,(-1,-1))) otherVisitable)
+        unvisited = (0,currentPos,[]) :: (map (\p=>(1000,p,[])) otherVisitable)
         m = dijkstra neighbors unvisited empty nextPos
-        poses = backtrack m nextPos
-        moves = zipWith (-) ((ne init) poses) ((ne tail) poses)
-        charMoves = map directionOf' moves in
-            (trace $ "\nMap is " ++ show m ++ 
-            "\nFrom " ++ show (coordToChar currentPos) ++ "/" ++ show currentPos ++ " to " ++ pack [nextPress] ++ "/" ++ show nextPos ++ 
-            ": moves=" ++ show moves ++ 
-            "\nposes=" ++ show poses) $ 
-            charMoves ++ ['A'] ++ shortestPresses presses (charToCoord, coordToChar, allCoords) nextPos
+        posesForAllPaths = backtrack m nextPos
+        movesForAllPaths = map (\poses => zipWith (-) ((ne init) poses) ((ne tail) poses)) posesForAllPaths
+        charMovesForAllPaths = map (\moves => map directionOf' moves) movesForAllPaths in concatMap (\charMoves => map (charMoves ++ ['A'] ++) (shortestPresses presses (charToCoord, coordToChar, allCoords) nextPos)) charMovesForAllPaths
 
-partial test : List Char
+-- correct shortest length, same path as example
+partial test : List (List Char)
 test = shortestPresses (unpack "029A") (numericKeypad, numericKeypad', numericKeypadCoords) (3,2)
+
+-- correct shortest length, different path as example
+-- partial test2 : List (List Char)
+-- test2 = map (\t => shortestPresses t (directionalKeypad, directionalKeypad', directionalKeypadCoords) (0,2)) test
+
+-- -- too long and different path
+-- partial test3 : List Char
+-- test3 = shortestPresses test2 (directionalKeypad, directionalKeypad', directionalKeypadCoords) (0,2)
+
+-- I think what's happening is because there are multiple shortest paths, we have to try them all (one could be more efficient to push at a higher level)
 
 partial part1 : String -> Int
 part1 input = 1
