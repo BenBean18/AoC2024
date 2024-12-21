@@ -354,7 +354,7 @@ d = ['<', 'A']
 partial finalLength' : {n : Nat} -> List (List (List Char)) -> Int
 finalLength' {n=Z} l =
     foldl (\currentSum, thisTransition => currentSum + cast (length ((ne head) thisTransition))) 0 l
-finalLength' {n=(S k)} l = (trace $ show l) $ sum $ map (\possibleTransitions => -- List (List Char)
+finalLength' {n=(S k)} l = sum $ map (\possibleTransitions => -- List (List Char)
     let outcomes : List Int = map (\nextStep => finalLength' {n=k} (directional ('A'::nextStep))) possibleTransitions -- we want the minimum cost for the next step
         in (ne head) (sort outcomes)) l
 
@@ -396,7 +396,10 @@ Day21> :exec printLn (finalLength' {n=2} c)
  -}
 
 partial part2 : String -> Int
-part2 input = 2
+part2 input = 
+    let l = lines input
+        complexities = map (\line => finalLength' {n=24} (numeric line)) l
+        numbers = map numericPart l in sum (zipWith (*) complexities numbers)
 
 public export
 partial solve : Fin 2 -> String -> IO Int
