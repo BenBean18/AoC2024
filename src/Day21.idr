@@ -150,26 +150,32 @@ shortestPresses (nextPress::presses) (charToCoord, coordToChar, allCoords) curre
         movesForAllPaths = map (\poses => zipWith (-) ((ne init) poses) ((ne tail) poses)) posesForAllPaths
         charMovesForAllPaths = map (\moves => map directionOf' moves) movesForAllPaths in concatMap (\charMoves => map (charMoves ++ ['A'] ++) (shortestPresses presses (charToCoord, coordToChar, allCoords) nextPos)) charMovesForAllPaths
 
-partial test : List (List Char)
-test = shortestPresses (unpack "029A") (numericKeypad, numericKeypad', numericKeypadCoords) (3,2)
+partial first : String -> List (List Char)
+first s = shortestPresses (unpack s) (numericKeypad, numericKeypad', numericKeypadCoords) (3,2)
 
-partial test2 : List (List Char)
-test2 = 
-    let sorted = sortBy (compare `on` length) $ concatMap (\t => shortestPresses t (directionalKeypad, directionalKeypad', directionalKeypadCoords) (0,2)) test
+partial second : String -> List (List Char)
+second s = 
+    let sorted = sortBy (compare `on` length) $ concatMap (\t => shortestPresses t (directionalKeypad, directionalKeypad', directionalKeypadCoords) (0,2)) (first s)
         minLength = length ((ne head) sorted) in filter ((.) ((==) minLength) length) sorted
 
-partial test3 : List (List Char)
-test3 =
-    let sorted = sortBy (compare `on` length) $ concatMap (\t => shortestPresses t (directionalKeypad, directionalKeypad', directionalKeypadCoords) (0,2)) test2
+partial third : String -> List (List Char)
+third s =
+    let sorted = sortBy (compare `on` length) $ concatMap (\t => shortestPresses t (directionalKeypad, directionalKeypad', directionalKeypadCoords) (0,2)) (second s)
         minLength = length ((ne head) sorted) in filter ((.) ((==) minLength) length) sorted
 
-partial resultHopefully : Nat
-resultHopefully = length ((ne head) test3)
+partial complexityScore : String -> Int
+complexityScore s = cast (length ((ne head) (third s)))
+
+numericPart : String -> Int
+numericPart s = cast (pack (filter isDigit (unpack s)))
 
 -- I think what's happening is because there are multiple shortest paths, we have to try them all (one could be more efficient to push at a higher level)
 
 partial part1 : String -> Int
-part1 input = 1
+part1 input =
+    let l = lines input
+        complexities = map complexityScore l
+        numbers = map numericPart l in (trace $ show complexities ++ " " ++ show numbers) $ sum (zipWith (*) complexities numbers)
 
 -- Part 2
 
