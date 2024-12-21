@@ -360,11 +360,11 @@ finalLength' {n=Z} l memo =
     (foldl (\currentSum, thisTransition => currentSum + cast (length ((ne head) thisTransition))) 0 l, memo)
 finalLength' {n=(S k)} l memo = --(trace $ show l ++ " " ++ show (S k)) $ 
     let newMap : List (Int, SortedMap (List Char) Int) = map (\possibleTransitions => -- List (List Char)
-                    let outcomes : SortedMap (List Char) Int = foldl (\currentMap, nextStep => 
+                    let (outcomes,m) : (List Int, SortedMap (List Char) Int) = foldl (\(l,currentMap), nextStep => 
                             case (lookup nextStep memo) of
-                                Just result => insert nextStep result currentMap
-                                Nothing => let (result, newMap) = finalLength' {n=k} (directional ('A'::nextStep)) currentMap in insert nextStep result currentMap) Data.SortedMap.empty possibleTransitions -- we want the minimum cost for the next step
-                            in ((ne head) (sort (values outcomes)), outcomes)) l
+                                Just result => (result::l, insert nextStep result currentMap)
+                                Nothing => let (result, newMap) = finalLength' {n=k} (directional ('A'::nextStep)) currentMap in (result::l, insert nextStep result newMap)) ([],memo) possibleTransitions -- we want the minimum cost for the next step
+                            in ((ne head) (sort outcomes), m)) l
         (lengths, maps) = unzip newMap in (sum lengths, foldl mergeLeft memo maps)
 
 {-
@@ -407,7 +407,7 @@ Day21> :exec printLn (finalLength' {n=2} c)
 partial part2 : String -> Int
 part2 input = 
     let l = lines input
-        (complexities,_) = unzip $ map (\line => finalLength' {n=24} (numeric line) empty) l
+        (complexities,_) = unzip $ map (\line => finalLength' {n=12} (numeric line) empty) l
         numbers = map numericPart l in sum (zipWith (*) complexities numbers)
 
 public export
