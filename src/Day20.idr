@@ -125,7 +125,7 @@ part1 input =
 
 bfsPath : SortedMap (Int, Int) Char -> List (Int, Int) -> (Int, Int) -> (Int, Int) -> List (Int,Int)
 bfsPath m visited current end = 
-    if current == end then visited
+    if current == end then (visited++[end]) -- oooooops i kinda forgot to add the end so was missing cheats :(
     else if current `elem` visited then [] else
     concatMap (\n => bfsPath m (visited++[current]) n end) (neighbors m current) -- only one path so this is fine
 
@@ -164,14 +164,28 @@ timeSaved m path n = (trace $ show n) $ map (\(start, end) => (cast n) - (manhat
 -- because a path of length 25 from start to end could involve 5 along the actual path at the end for example
 -- better idea (in talking) could be to go along the path and look for all other dots within range, then lookup indices to see what the "normal" distance is compared to how much saved
 
-part2 : String -> Int
+within20 : (Int, Int) -> List (Int, (Int, Int))
+within20 pos = map (\a => (manhattanDist (0,0) a, pos + a)) (filter (\a => manhattanDist (0,0) a <= 20) [(x,y) | x <- [-20..20], y <- [-20..20]])
+
+partial findCheats2 : SortedMap (Int, Int) Int -> (Int, Int) -> List Int
+findCheats2 indexMap pos = (trace $ show pos) $
+    let (Just start) = lookup pos indexMap
+        toCheck : List (Int, (Int, Int)) = within20 pos
+        indices = map (\(dist,pos) =>
+            case pos `lookup` indexMap of
+                Just idx => (idx - start) - dist -- hopefully only + is ok? i think forward + backward was what was causing double counting before
+                Nothing => 0) toCheck in indices
+
+partial part2 : String -> Int
 part2 input = 
     let m = twoDStringToMap input
         l : List ((Int, Int), Char) = toList m
         path = findPath m
         indexMap : SortedMap (Int, Int) Int = fromList (zip path (map cast [0..(length path `minus` 1)]))
-        cheatTimes = concatMap (timeSaved m path) [1..(length path)]
-        good = filter (>=the Int 50) cheatTimes in (trace $ show (sort good)) $ cast (length good)
+        -- cheatTimes = concatMap (timeSaved m path) [1..(length path)]
+        -- good = filter (>=the Int 100) cheatTimes in cast (length good)
+        cheatTimes = concatMap (findCheats2 indexMap) path
+        good = filter (>=the Int 100) cheatTimes in cast (length good)
 
 public export
 partial solve : Fin 2 -> String -> IO Int
