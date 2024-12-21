@@ -355,15 +355,15 @@ d = ['<', 'A']
 -- memoization!
 -- I *think* it'll be fine to do it on this function, we could do it on `directional` instead but this saves more time
 -- Actually, let's memoize both: key is nextStep, value is finalLength' {n=k} (directional ('A'::nextStep))
-partial finalLength' : {n : Nat} -> List (List (List Char)) -> SortedMap (List Char) Int -> (Int, SortedMap (List Char) Int)
+partial finalLength' : {n : Nat} -> List (List (List Char)) -> SortedMap (List Char,Nat) Int -> (Int, SortedMap (List Char,Nat) Int)
 finalLength' {n=Z} l memo =
     (foldl (\currentSum, thisTransition => currentSum + cast (length ((ne head) thisTransition))) 0 l, memo)
 finalLength' {n=(S k)} l memo = --(trace $ show l ++ " " ++ show (S k)) $ 
-    let newMap : List (Int, SortedMap (List Char) Int) = map (\possibleTransitions => -- List (List Char)
-                    let (outcomes,m) : (List Int, SortedMap (List Char) Int) = foldl (\(l,currentMap), nextStep => 
-                            case (lookup nextStep memo) of
-                                Just result => (result::l, insert nextStep result currentMap)
-                                Nothing => let (result, newMap) = finalLength' {n=k} (directional ('A'::nextStep)) currentMap in (result::l, insert nextStep result newMap)) ([],memo) possibleTransitions -- we want the minimum cost for the next step
+    let newMap : List (Int, SortedMap (List Char,Nat) Int) = map (\possibleTransitions => -- List (List Char)
+                    let (outcomes,m) : (List Int, SortedMap (List Char,Nat) Int) = foldl (\(l,currentMap), nextStep => 
+                            case (lookup (nextStep,(S k)) memo) of
+                                Just result => (result::l, insert (nextStep,(S k)) result currentMap)
+                                Nothing => let (result, newMap) = finalLength' {n=k} (directional ('A'::nextStep)) currentMap in (result::l, insert (nextStep,(S k)) result newMap)) ([],memo) possibleTransitions -- we want the minimum cost for the next step
                             in ((ne head) (sort outcomes), m)) l
         (lengths, maps) = unzip newMap in (sum lengths, foldl mergeLeft memo maps)
 
@@ -407,7 +407,7 @@ Day21> :exec printLn (finalLength' {n=2} c)
 partial part2 : String -> Int
 part2 input = 
     let l = lines input
-        (complexities,_) = unzip $ map (\line => finalLength' {n=12} (numeric line) empty) l
+        (complexities,_) = unzip $ map (\line => finalLength' {n=5} (numeric line) empty) l
         numbers = map numericPart l in sum (zipWith (*) complexities numbers)
 
 public export
