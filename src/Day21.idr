@@ -365,7 +365,7 @@ finalLength' {n=(S k)} l memo = --(trace $ show l ++ " " ++ show (S k)) $
                                 Just result => (result::l, insert (nextStep,(S k)) result currentMap)
                                 Nothing => let (result, newMap) = finalLength' {n=k} (directional ('A'::nextStep)) currentMap in (result::l, insert (nextStep,(S k)) result newMap)) ([],memo) possibleTransitions -- we want the minimum cost for the next step
                             in ((ne head) (sort outcomes), m)) l
-        (lengths, maps) = unzip newMap in (sum lengths, foldl mergeLeft memo maps)
+        (lengths, maps) = unzip newMap in (sum lengths, foldl mergeLeft empty maps)
 
 {-
 Day21> :exec printLn (finalLength' {n=0} c)
@@ -407,8 +407,12 @@ Day21> :exec printLn (finalLength' {n=2} c)
 partial part2 : String -> Int
 part2 input = 
     let l = lines input
-        (complexities,_) = unzip $ map (\line => finalLength' {n=5} (numeric line) empty) l
+        (complexities,_) = unzip $ map (\line => finalLength' {n=13} (numeric line) empty) l
         numbers = map numericPart l in sum (zipWith (*) complexities numbers)
+
+-- https://www.desmos.com/calculator/iybcizuenr : wait eight days for this to complete
+-- (the * 5 is because I wanted to test on just one instead of all 5 inputs)
+-- time to optimize more, maybe memoize something different (like `directional` since I assume that takes the longest time)
 
 public export
 partial solve : Fin 2 -> String -> IO Int
