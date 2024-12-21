@@ -167,14 +167,14 @@ timeSaved m path n = (trace $ show n) $ map (\(start, end) => (cast n) - (manhat
 within20 : (Int, Int) -> List (Int, (Int, Int))
 within20 pos = map (\a => (manhattanDist (0,0) a, pos + a)) (filter (\a => manhattanDist (0,0) a <= 20) [(x,y) | x <- [-20..20], y <- [-20..20]])
 
-partial findCheats2 : SortedMap (Int, Int) Int -> (Int, Int) -> List Int
+partial findCheats2 : SortedMap (Int, Int) Int -> (Int, Int) -> Int
 findCheats2 indexMap pos = (trace $ show pos) $
     let (Just start) = lookup pos indexMap
         toCheck : List (Int, (Int, Int)) = within20 pos
-        indices = map (\(dist,pos) =>
+        times = map (\(dist,pos) =>
             case pos `lookup` indexMap of
                 Just idx => (idx - start) - dist -- hopefully only + is ok? i think forward + backward was what was causing double counting before
-                Nothing => 0) toCheck in indices
+                Nothing => 0) toCheck in cast (length (filter (>=the Int 100) times))
 
 partial part2 : String -> Int
 part2 input = 
@@ -184,8 +184,7 @@ part2 input =
         indexMap : SortedMap (Int, Int) Int = fromList (zip path (map cast [0..(length path `minus` 1)]))
         -- cheatTimes = concatMap (timeSaved m path) [1..(length path)]
         -- good = filter (>=the Int 100) cheatTimes in cast (length good)
-        cheatTimes = concatMap (findCheats2 indexMap) path
-        good = filter (>=the Int 100) cheatTimes in cast (length good)
+        goodCheats = sum (map (findCheats2 indexMap) path) in goodCheats
 
 public export
 partial solve : Fin 2 -> String -> IO Int
