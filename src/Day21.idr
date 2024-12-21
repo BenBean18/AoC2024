@@ -348,11 +348,15 @@ b = [[['>', 'A']], [['<', 'A']], [['>', '>', '^', 'A'], ['>', '^', '>', 'A']]]
 partial c : List (List (List Char))
 c = numeric "029A"
 
+d : List Char
+d = ['<', 'A']
+
 partial finalLength' : {n : Nat} -> List (List (List Char)) -> Int
-finalLength' {n=Z} l = (trace $ show l) $
+finalLength' {n=Z} l =
     foldl (\currentSum, thisTransition => currentSum + cast (length ((ne head) thisTransition))) 0 l
-finalLength' {n=(S k)} l = sum $ map (\possibleTransitions => -- List (List Char)
-    let outcomes : List Int = map (\tr => finalLength' {n=k} (directional tr)) possibleTransitions in (ne head) (sort outcomes)) l
+finalLength' {n=(S k)} l = (trace $ show l) $ sum $ map (\possibleTransitions => -- List (List Char)
+    let outcomes : List Int = map (\nextStep => finalLength' {n=k} (directional ('A'::nextStep))) possibleTransitions -- we want the minimum cost for the next step
+        in (ne head) (sort outcomes)) l
 
 {-
 Day21> :exec printLn (finalLength' {n=0} c)
@@ -374,6 +378,21 @@ Day21> :exec printLn (finalLength' {n=0} c)
 
 this is correct for one iteration, yay!
 multiple is currently broken though
+ -}
+
+{-
+Day21> :exec printLn (finalLength' {n=1} c)
+[[['<', 'A']], [['^', 'A']], [['>', '^', '^', 'A'], ['^', '>', '^', 'A'], ['^', '^', '>', 'A']], [['v', 'v', 'v', 'A']]]
+28
+Day21> :exec printLn (finalLength' {n=2} c)
+[[['v', '<', '<', 'A'], ['<', 'v', '<', 'A']], [['>', '>', '^', 'A'], ['>', '^', '>', 'A']]]
+[[['<', 'A']], [['>', 'A']]]
+[[['v', 'A']], [['<', '^', 'A'], ['^', '<', 'A']], [['A']], [['>', 'A']]]
+[[['<', 'A']], [['v', '>', 'A'], ['>', 'v', 'A']], [['<', '^', 'A'], ['^', '<', 'A']], [['>', 'A']]]
+[[['<', 'A']], [['A']], [['v', '>', 'A'], ['>', 'v', 'A']], [['^', 'A']]]
+[[['v', '<', 'A'], ['<', 'v', 'A']], [['A']], [['A']], [['>', '^', 'A'], ['^', '>', 'A']]]
+[[['<', 'A']], [['^', 'A']], [['>', '^', '^', 'A'], ['^', '>', '^', 'A'], ['^', '^', '>', 'A']], [['v', 'v', 'v', 'A']]]
+68
  -}
 
 partial part2 : String -> Int
