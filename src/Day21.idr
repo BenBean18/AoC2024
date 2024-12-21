@@ -351,12 +351,21 @@ c = numeric "029A"
 d : List Char
 d = ['<', 'A']
 
-partial finalLength' : {n : Nat} -> List (List (List Char)) -> Int
-finalLength' {n=Z} l =
-    foldl (\currentSum, thisTransition => currentSum + cast (length ((ne head) thisTransition))) 0 l
-finalLength' {n=(S k)} l = sum $ map (\possibleTransitions => -- List (List Char)
-    let outcomes : List Int = map (\nextStep => finalLength' {n=k} (directional ('A'::nextStep))) possibleTransitions -- we want the minimum cost for the next step
-        in (ne head) (sort outcomes)) l
+-- results are being recomputed thousands of times, so we know what that means...
+-- memoization!
+-- I *think* it'll be fine to do it on this function, we could do it on `directional` instead but this saves more time
+-- Actually, let's memoize both: key is nextStep, value is finalLength' {n=k} (directional ('A'::nextStep))
+partial finalLength' : {n : Nat} -> List (List (List Char)) -> SortedMap (List Char) Int -> (Int, SortedMap (List Char) Int)
+finalLength' {n=Z} l memo =
+    (foldl (\currentSum, thisTransition => currentSum + cast (length ((ne head) thisTransition))) 0 l, memo)
+finalLength' {n=(S k)} l memo = --(trace $ show l ++ " " ++ show (S k)) $ 
+    let newMap : List (Int, SortedMap (List Char) Int) = map (\possibleTransitions => -- List (List Char)
+                    let outcomes : SortedMap (List Char) Int = foldl (\currentMap, nextStep => 
+                            case (lookup nextStep memo) of
+                                Just result => insert nextStep result currentMap
+                                Nothing => let (result, newMap) = finalLength' {n=k} (directional ('A'::nextStep)) currentMap in insert nextStep result currentMap) Data.SortedMap.empty possibleTransitions -- we want the minimum cost for the next step
+                            in ((ne head) (sort (values outcomes)), outcomes)) l
+        (lengths, maps) = unzip newMap in (sum lengths, foldl mergeLeft memo maps)
 
 {-
 Day21> :exec printLn (finalLength' {n=0} c)
@@ -398,7 +407,7 @@ Day21> :exec printLn (finalLength' {n=2} c)
 partial part2 : String -> Int
 part2 input = 
     let l = lines input
-        complexities = map (\line => finalLength' {n=24} (numeric line)) l
+        (complexities,_) = unzip $ map (\line => finalLength' {n=24} (numeric line) empty) l
         numbers = map numericPart l in sum (zipWith (*) complexities numbers)
 
 public export
