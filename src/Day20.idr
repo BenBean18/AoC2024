@@ -157,8 +157,8 @@ pathsOfLength l n = if (length l) < n then [] else
 manhattanDist : (Int, Int) -> (Int, Int) -> Int
 manhattanDist (y1,x1) (y2,x2) = (abs (y2-y1)) + (abs (x2-x1))
 
-timeSaved : SortedMap (Int, Int) Char -> List (Int, Int) -> Nat -> List Int
-timeSaved m path n = (trace $ show n) $ map (\(start, end) => (cast n) - (manhattanDist start end) - 1) (pathsOfLength path n)
+timeSaved : SortedMap (Int, Int) Char -> List (Int, Int) -> Nat -> Int
+timeSaved m path n = (trace $ show n) $ cast $ length $ filter (>=the Int 100) (map (\(start, end) => (cast n) - (manhattanDist start end) - 1) (pathsOfLength path n))
 
 -- wait checking from start to end doesn't work
 -- because a path of length 25 from start to end could involve 5 along the actual path at the end for example
@@ -182,9 +182,8 @@ part2 input =
         l : List ((Int, Int), Char) = toList m
         path = findPath m
         indexMap : SortedMap (Int, Int) Int = fromList (zip path (map cast [0..(length path `minus` 1)]))
-        -- cheatTimes = concatMap (timeSaved m path) [1..(length path)]
-        -- good = filter (>=the Int 100) cheatTimes in cast (length good)
-        goodCheats = sum (map (findCheats2 indexMap) path) in goodCheats
+        -- goodCheats = sum (map (timeSaved m path) [1..(length path)]) in goodCheats -- doesn't work, gives an answer ~42x too high
+        goodCheats : Int = foldl (\acc, elem => acc + findCheats2 indexMap elem) 0 path in goodCheats
 
 public export
 partial solve : Fin 2 -> String -> IO Int
