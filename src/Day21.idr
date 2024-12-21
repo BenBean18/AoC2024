@@ -209,6 +209,71 @@ part1 input =
 
 -- uhhhhhhh
 
+-- i mean the only thing that matters is the total path length
+-- but we do need to know intermediates to know where to press
+-- i was thinking maybe we just store the length from point to point in a map and add them or something
+-- **we can break the problem down more by finding the shortest path for each transition
+-- how much faster? benchmarking time!
+
+-- partial part2 : String -> Int
+-- part2 input = 
+    -- (complexityScore "96") + (complexityScore "65") + (complexityScore "5A") -- 71404us
+    -- complexityScore "965A" -- 4262927us (!!!!!!)
+
+-- Ok so that's definitely worth it
+-- Wow
+-- We need to find a way to save the starting/ending point, but wow
+-- Doing that at every level should help a LOT, maximum path length will be like 4 or 5 and we can add them
+-- aha and all the subsequent ones end on A, so the starting point IS constant between each level, doesn't matter what path we choose
+-- bingo!
+-- now time to implement it
+-- if we need more speed can precompute all shortest paths
+
+partial onlyMinLength : List (List a) -> List (List a)
+onlyMinLength l = 
+    let sorted = sortBy (compare `on` length) l
+        minLength = length ((ne head) sorted) in filter ((.) ((==) minLength) length) sorted
+
+partial numeric : String -> List (List (List Char))
+numeric s = 
+    let u = unpack s -- starts on A
+        pairs = zip (init ('A'::u)) (tail ('A'::u)) -- i like this idiom or whatever it is lol
+        in
+        map (\(start,end) => shortestPresses [end] (numericKeypad, numericKeypad', numericKeypadCoords) (numericKeypad start)) pairs
+
+-- returns a list, containing a list of all possible paths (which themselves are char lists) for every transition
+
+-- add A at the very start, but only at the very start
+partial directional : List Char -> List (List (List Char))
+directional u = 
+    let pairs = zip ((ne init) u) ((ne tail) u) -- i like this idiom or whatever it is lol
+        in
+        map (\(start,end) => shortestPresses [end] (directionalKeypad, directionalKeypad', directionalKeypadCoords) (directionalKeypad start)) pairs
+
+a : List (List Char)
+a = [['<', '^', '<', 'A'], ['^', '<', '<', 'A']]
+
+{-
+:exec printLn (map directional a)
+
+python for printing:
+>>> a = [[[['>', '^', 'A']], [['v', '<', 'A']], [['>', '>', '^', 'A'], ['>', '^', '>', 'A']]], [[['v', '<', 'A']], [['A']], [['>', '>', '^', 'A'], ['>', '^', '>', 'A']]]]
+>>> for i in a: print(i)
+... 
+[[['>', '^', 'A']], [['v', '<', 'A']], [['>', '>', '^', 'A'], ['>', '^', '>', 'A']]] <-- this should be eliminated! it's longer
+[[['v', '<', 'A']], [['A']], [['>', '>', '^', 'A'], ['>', '^', '>', 'A']]]
+>>> 
+ -}
+
+partial nextIterations : List (List Char) -> List (List (List (List Char))) -- listception
+nextIterations u = 
+    let d : List (List (List (List Char))) = map directional u -- returns a list, of lists for every path, containing a list of all possible paths (which themselves are char lists) for every transition
+        lengths = map ((.) sum (map (length . (ne head)))) d
+        minLength = (ne head) $ sort lengths
+        z = zip d lengths in (trace $ show lengths) $ map fst $ filter (\(_,l) => l == minLength) z
+
+-- We want to filter for min length after seeing all of the possibilities at each level
+
 partial part2 : String -> Int
 part2 input = 2
 
