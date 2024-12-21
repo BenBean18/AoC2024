@@ -241,7 +241,8 @@ numeric s =
         in
         map (\(start,end) => shortestPresses [end] (numericKeypad, numericKeypad', numericKeypadCoords) (numericKeypad start)) pairs
 
--- returns a list, containing a list of all possible paths (which themselves are char lists) for every transition
+-- returns a list, containing a list of all possible ways (which themselves are char lists) to complete every transition
+-- these possibilities for every transition are now the only paths we need to pass to the next iteration
 
 -- add A at the very start, but only at the very start
 partial directional : List Char -> List (List (List Char))
@@ -251,7 +252,7 @@ directional u =
         map (\(start,end) => shortestPresses [end] (directionalKeypad, directionalKeypad', directionalKeypadCoords) (directionalKeypad start)) pairs
 
 a : List (List Char)
-a = [['<', '^', '<', 'A'], ['^', '<', '<', 'A']]
+a = [['<', '^', '<', 'A'], ['^', '<', '<', 'A']] -- poof!
 
 {-
 :exec printLn (map directional a)
@@ -270,7 +271,74 @@ nextIterations u =
     let d : List (List (List (List Char))) = map directional u -- returns a list, of lists for every path, containing a list of all possible paths (which themselves are char lists) for every transition
         lengths = map ((.) sum (map (length . (ne head)))) d
         minLength = (ne head) $ sort lengths
-        z = zip d lengths in (trace $ show lengths) $ map fst $ filter (\(_,l) => l == minLength) z
+        z = zip d lengths in map fst $ filter (\(_,l) => l == minLength) z
+
+{-
+for example (only considering directional rn):
+let's say we want to push A<A and figure out the total cost of that.
+Day21> :exec printLn (directional (unpack "A<A"))
+[                                   this list has two elements, one for each transition
+
+    [                               these are the possible next-level button sequences to do the transition 'A' -> '<' (min/only length: 4)
+        ['v', '<', '<', 'A'], 
+        ['<', 'v', '<', 'A']
+    ], 
+    [                               these are the possible next-level button sequences to do the transition '<' -> 'A' (min/only length: 4)
+        ['>', '>', '^', 'A'],
+        ['>', '^', '>', 'A']
+    ]
+
+]
+nice formatting is important here. 3D (or 4D *gasp*) lists are hard to think about in a flat form.
+
+we break this problem up into the transitions.
+
+now, we want to check the next level for all four of these until we get to 25.
+
+how do we do that?
+
+well, let's consider the first transition to start.
+
+Day21> :exec printLn (directional ['v', '<', '<', 'A'])
+[
+    [                               these are the possible next-level button sequences to do the transition 'v' -> '<' (min/only length: 2)
+        ['<', 'A']
+    ],
+    [                               these are the possible next-level button sequences to do the transition '<' -> '<' (min/only length: 1)
+        ['A']
+    ],
+    [                               these are the possible next-level button sequences to do the transition '<' -> 'A' (min/only length: 4)
+        ['>', '>', '^', 'A'],
+        ['>', '^', '>', 'A']
+    ]
+]
+
+we really only care about the length. also, this is basically a tree. but, we haven't even finished considering the other option of this transition, so:
+Day21> :exec printLn (directional ['<', 'v', '<', 'A'])
+[
+    [                               these are the possible next-level button sequences to do the transition '<' -> 'v' (min/only length: 2)
+        ['>', 'A']
+    ],
+    [                               these are the possible next-level button sequences to do the transition 'v' -> '<' (min/only length: 2****)
+        ['<', 'A']
+    ],
+    [                               these are the possible next-level button sequences to do the transition '<' -> 'A' (min/only length: 4)
+        ['>', '>', '^', 'A'],
+        ['>', '^', '>', 'A']
+    ]
+]
+
+we notice that this second path is less efficient, it takes 2+2+4=8 moves to get there in comparison to 2+1+4=7 moves for the first one.
+this is why we have to explore all possibilities, the first way to do the transition was better than the second
+
+so...how do we implement this?
+
+I think this is a BFS, we compare all possibilities at the same level to see which ones are the most efficient.
+
+the list kinda does have to grow each time, i think
+
+final result is the combination of all lengths of all transitions at the last level in the best path
+-}
 
 -- We want to filter for min length after seeing all of the possibilities at each level
 
