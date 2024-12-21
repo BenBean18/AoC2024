@@ -342,6 +342,40 @@ final result is the combination of all lengths of all transitions at the last le
 
 -- We want to filter for min length after seeing all of the possibilities at each level
 
+b : List (List (List Char))
+b = [[['>', 'A']], [['<', 'A']], [['>', '>', '^', 'A'], ['>', '^', '>', 'A']]]
+
+partial c : List (List (List Char))
+c = numeric "029A"
+
+partial finalLength' : {n : Nat} -> List (List (List Char)) -> Int
+finalLength' {n=Z} l = (trace $ show l) $
+    foldl (\currentSum, thisTransition => currentSum + cast (length ((ne head) thisTransition))) 0 l
+finalLength' {n=(S k)} l = sum $ map (\possibleTransitions => -- List (List Char)
+    let outcomes : List Int = map (\tr => finalLength' {n=k} (directional tr)) possibleTransitions in (ne head) (sort outcomes)) l
+
+{-
+Day21> :exec printLn (finalLength' {n=0} c)
+[
+    [
+        ['<', 'A']
+    ], [
+        ['^', 'A']
+    ], [
+        ['>', '^', '^', 'A'],
+        ['^', '>', '^', 'A'],
+        ['^', '^', '>', 'A']
+    ], 
+    [
+        ['v', 'v', 'v', 'A']
+    ]
+]
+12
+
+this is correct for one iteration, yay!
+multiple is currently broken though
+ -}
+
 partial part2 : String -> Int
 part2 input = 2
 
