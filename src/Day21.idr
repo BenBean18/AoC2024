@@ -148,7 +148,13 @@ shortestPresses (nextPress::presses) (charToCoord, coordToChar, allCoords) curre
         m = dijkstra neighbors unvisited empty nextPos
         posesForAllPaths = backtrack m nextPos
         movesForAllPaths = map (\poses => zipWith (-) ((ne init) poses) ((ne tail) poses)) posesForAllPaths
-        charMovesForAllPaths = map (\moves => map directionOf' moves) movesForAllPaths in concatMap (\charMoves => map (charMoves ++ ['A'] ++) (shortestPresses presses (charToCoord, coordToChar, allCoords) nextPos)) charMovesForAllPaths
+        charMovesForAllPaths = map (\moves => map directionOf' moves) movesForAllPaths in 
+            -- (trace $ "\nMap is " ++ show m ++ 
+            -- "\nFrom " ++ show (coordToChar currentPos) ++ "/" ++ show currentPos ++ " to " ++ pack [nextPress] ++ "/" ++ show nextPos ++ 
+            -- ": moves=" ++ show movesForAllPaths ++ 
+            -- "\nposes=" ++ show posesForAllPaths ++
+            -- "\nneighs for ") $ 
+            concatMap (\charMoves => map (reverse charMoves ++ ['A'] ++) (shortestPresses presses (charToCoord, coordToChar, allCoords) nextPos)) charMovesForAllPaths
 
 partial first : String -> List (List Char)
 first s = shortestPresses (unpack s) (numericKeypad, numericKeypad', numericKeypadCoords) (3,2)
@@ -162,6 +168,22 @@ partial third : String -> List (List Char)
 third s =
     let sorted = sortBy (compare `on` length) $ concatMap (\t => shortestPresses t (directionalKeypad, directionalKeypad', directionalKeypadCoords) (0,2)) (second s)
         minLength = length ((ne head) sorted) in filter ((.) ((==) minLength) length) sorted
+
+partial test : IO ()
+test = printLn $ map pack (first "179A")
+-- ["<^<A^^A>>AvvvA", "<<^A^^A>>AvvvA"]
+-- the second one is invalid, left-left-up results on going on an empty square which isn't allowed. what happened?
+-- i think the moves are backwards
+{-
+Map is fromList [((0, 2), [(1, 2)]), ((1, 1), [(2, 1), (1, 2)]), ((1, 2), [(2, 2)]), ((2, 0), [(2, 1)]), ((2, 1), [(3, 1), (2, 2)]), ((2, 2), [(3, 2)]), ((3, 1), [(3, 2)]), ((3, 2), [])]
+From Just 'A'/(3, 2) to 1/(2, 0): moves=[[(0, -1), (-1, 0), (0, -1)], [(0, -1), (0, -1), (-1, 0)]]
+poses=[[(2, 0), (2, 1), (3, 1), (3, 2)], [(2, 0), (2, 1), (2, 2), (3, 2)]]
+
+so in the second one ^<< works but <<^ doesn't
+
+yeah and we're building the moves list by adding on the current one to the start/cons in backtrack
+better to reverse once done i think, since adding at beginning is O(1) but end is O(n) I think?
+ -}
 
 partial complexityScore : String -> Int
 complexityScore s = cast (length ((ne head) (third s)))
@@ -177,7 +199,15 @@ part1 input =
         complexities = map complexityScore l
         numbers = map numericPart l in (trace $ show complexities ++ " " ++ show numbers) $ sum (zipWith (*) complexities numbers)
 
+-- yayyyy it worked...in ~30 seconds
+
 -- Part 2
+
+-- WHAT A CHAIN OF 25
+
+-- THAT'S MASSIVE
+
+-- uhhhhhhh
 
 partial part2 : String -> Int
 part2 input = 2
