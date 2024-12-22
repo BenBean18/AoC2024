@@ -11,6 +11,7 @@ import Data.SortedSet
 import Data.List1
 import Data.Vect
 import MinHeap
+import Data.IORef
 
 -- Part 1
 
@@ -244,15 +245,24 @@ numeric s =
 -- returns a list, containing a list of all possible ways (which themselves are char lists) to complete every transition
 -- these possibilities for every transition are now the only paths we need to pass to the next iteration
 
--- add A at the very start, but only at the very start
-partial directional : List Char -> List (List (List Char))
-directional u = 
+partial directional' : List Char -> List (List (List Char))
+directional' u = 
     let pairs = zip ((ne init) u) ((ne tail) u) -- i like this idiom or whatever it is lol
         in
         map (\(start,end) => shortestPresses [end] (directionalKeypad, directionalKeypad', directionalKeypadCoords) (directionalKeypad start)) pairs
 
 a : List (List Char)
 a = [['<', '^', '<', 'A'], ['^', '<', '<', 'A']] -- poof!
+
+partial directional : IORef (SortedMap (List Char) (List (List (List Char)))) -> List Char -> List (List (List Char))
+directional r input = unsafePerformIO $ do
+    memo <- readIORef r
+    case lookup input memo of
+        Just output => pure output
+        Nothing => do
+            let output = directional' input
+            modifyIORef r (insert input output)
+            pure output
 
 {-
 :exec printLn (map directional a)
@@ -265,13 +275,6 @@ python for printing:
 [[['v', '<', 'A']], [['A']], [['>', '>', '^', 'A'], ['>', '^', '>', 'A']]]
 >>> 
  -}
-
-partial nextIterations : List (List Char) -> List (List (List (List Char))) -- listception
-nextIterations u = 
-    let d : List (List (List (List Char))) = map directional u -- returns a list, of lists for every path, containing a list of all possible paths (which themselves are char lists) for every transition
-        lengths = map ((.) sum (map (length . (ne head)))) d
-        minLength = (ne head) $ sort lengths
-        z = zip d lengths in map fst $ filter (\(_,l) => l == minLength) z
 
 {-
 for example (only considering directional rn):
@@ -355,15 +358,15 @@ d = ['<', 'A']
 -- memoization!
 -- I *think* it'll be fine to do it on this function, we could do it on `directional` instead but this saves more time
 -- Actually, let's memoize both: key is nextStep, value is finalLength' {n=k} (directional ('A'::nextStep))
-partial finalLength' : {n : Nat} -> List (List (List Char)) -> SortedMap (List Char,Nat) Int -> (Int, SortedMap (List Char,Nat) Int)
-finalLength' {n=Z} l memo =
+partial finalLength' : {n : Nat} -> List (List (List Char)) -> SortedMap (List Char,Nat) Int -> IORef (SortedMap (List Char) (List (List (List Char)))) -> (Int, SortedMap (List Char,Nat) Int)
+finalLength' {n=Z} l memo _ =
     (foldl (\currentSum, thisTransition => currentSum + cast (length ((ne head) thisTransition))) 0 l, memo)
-finalLength' {n=(S k)} l memo = --(trace $ show l ++ " " ++ show (S k)) $ 
+finalLength' {n=(S k)} l memo r = --(trace $ show l ++ " " ++ show (S k)) $ 
     let newMap : List (Int, SortedMap (List Char,Nat) Int) = map (\possibleTransitions => -- List (List Char)
                     let (outcomes,m) : (List Int, SortedMap (List Char,Nat) Int) = foldl (\(l,currentMap), nextStep => 
                             case (lookup (nextStep,(S k)) memo) of
                                 Just result => (result::l, insert (nextStep,(S k)) result currentMap)
-                                Nothing => let (result, newMap) = finalLength' {n=k} (directional ('A'::nextStep)) currentMap in (result::l, insert (nextStep,(S k)) result newMap)) ([],memo) possibleTransitions -- we want the minimum cost for the next step
+                                Nothing => let (result, newMap) = finalLength' {n=k} (directional r ('A'::nextStep)) currentMap r in (result::l, insert (nextStep,(S k)) result newMap)) ([],memo) possibleTransitions -- we want the minimum cost for the next step
                             in ((ne head) (sort outcomes), m)) l
         (lengths, maps) = unzip newMap in (sum lengths, foldl mergeLeft empty maps)
 
@@ -404,11 +407,16 @@ Day21> :exec printLn (finalLength' {n=2} c)
 68
  -}
 
-partial part2 : String -> Int
-part2 input = 
+makeRef : (Ord k) => IORef (SortedMap k v)
+makeRef = unsafePerformIO $ newIORef (Data.SortedMap.empty)
+
+partial part2 : String -> IO Int
+part2 input = do
     let l = lines input
-        (complexities,_) = unzip $ map (\line => finalLength' {n=13} (numeric line) empty) l
-        numbers = map numericPart l in sum (zipWith (*) complexities numbers)
+    let r = makeRef
+    let (complexities,_) = unzip $ map (\line => finalLength' {n=10} (numeric line) empty r) l
+    let numbers = map numericPart l
+    pure $ sum (zipWith (*) complexities numbers)
 
 -- https://www.desmos.com/calculator/iybcizuenr : wait eight days for this to complete
 -- (the * 5 is because I wanted to test on just one instead of all 5 inputs)
@@ -417,4 +425,4 @@ part2 input =
 public export
 partial solve : Fin 2 -> String -> IO Int
 solve 0 = pure . part1
-solve 1 = pure . part2
+solve 1 = part2
