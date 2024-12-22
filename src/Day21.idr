@@ -440,6 +440,13 @@ part2 input = do
 -- Runtime with memoization: 51ms
 -- (without: 8 days...)
 
+-- resources about functional memoization maybe before I forget:
+-- https://github.com/idris-lang/Idris2/issues/1013
+-- https://stackoverflow.com/questions/13317242/what-are-paramorphisms
+-- https://maartenfokkinga.github.io/utwente/mmf91m.pdf
+-- https://github.com/vmchale/recursion_schemes/blob/master/Test/Spec.idr
+-- http://www.cs.ox.ac.uk/jeremy.gibbons/publications/metamorphisms-mpc.pdf
+
 public export
 partial solve : Fin 2 -> String -> IO Int
 solve 0 = pure . part1
