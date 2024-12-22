@@ -49,11 +49,8 @@ I guessed this was because I was calculating a lot of factorials (within chooses
 I remembered that memoization is a way to solve this, but couldn't find a standard way to do this in Idris. I found the STRef mutable reference thingy (after some ChatGPT inspiration, but this is all my own code) and wrote this. I can now calculate polynomials quickly in that code, and have a tool that I know will be useful for future days :)
  -}
 
-r : (Ord k) => IORef (SortedMap k v)
-r = unsafePerformIO $ newIORef (Data.SortedMap.empty)
-
-memoize' : (Show a) => (Ord a) => (a -> b) -> a -> IO b
-memoize' f input = do
+memoize' : (Show a) => (Ord a) => IORef (SortedMap a b) -> (a -> b) -> a -> IO b
+memoize' r f input = do
     memo <- readIORef r
     --(trace $ show (length $ Data.SortedMap.toList memo)) $
     case lookup input memo of
@@ -65,8 +62,8 @@ memoize' f input = do
             pure output
 
 public export
-memoize : (Show a) => (Ord a) => (a -> b) -> (a -> b)
-memoize f input = unsafePerformIO (memoize' f input)
+memoize : (Show a) => (Ord a) => IORef (SortedMap a b) -> (a -> b) -> (a -> b)
+memoize r f input = unsafePerformIO (memoize' r f input) -- so safe
 
 mapIndexed : ((Nat, a) -> b) -> List a -> List b
 mapIndexed f l = map f (zip [0..(length l `minus` 1)] l)

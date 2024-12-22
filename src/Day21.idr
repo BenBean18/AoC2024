@@ -358,17 +358,31 @@ d = ['<', 'A']
 -- memoization!
 -- I *think* it'll be fine to do it on this function, we could do it on `directional` instead but this saves more time
 -- Actually, let's memoize both: key is nextStep, value is finalLength' {n=k} (directional ('A'::nextStep))
-partial finalLength' : {n : Nat} -> List (List (List Char)) -> SortedMap (List Char,Nat) Int -> IORef (SortedMap (List Char) (List (List (List Char)))) -> (Int, SortedMap (List Char,Nat) Int)
-finalLength' {n=Z} l memo _ =
-    (foldl (\currentSum, thisTransition => currentSum + cast (length ((ne head) thisTransition))) 0 l, memo)
-finalLength' {n=(S k)} l memo r = --(trace $ show l ++ " " ++ show (S k)) $ 
-    let newMap : List (Int, SortedMap (List Char,Nat) Int) = map (\possibleTransitions => -- List (List Char)
-                    let (outcomes,m) : (List Int, SortedMap (List Char,Nat) Int) = foldl (\(l,currentMap), nextStep => 
-                            case (lookup (nextStep,(S k)) memo) of
-                                Just result => (result::l, insert (nextStep,(S k)) result currentMap)
-                                Nothing => let (result, newMap) = finalLength' {n=k} (directional r ('A'::nextStep)) currentMap r in (result::l, insert (nextStep,(S k)) result newMap)) ([],memo) possibleTransitions -- we want the minimum cost for the next step
-                            in ((ne head) (sort outcomes), m)) l
-        (lengths, maps) = unzip newMap in (sum lengths, foldl mergeLeft empty maps)
+-- partial finalLength' : {n : Nat} -> List (List (List Char)) -> SortedMap (List Char,Nat) Int -> IORef (SortedMap (List Char) (List (List (List Char)))) -> (Int, SortedMap (List Char,Nat) Int)
+-- finalLength' {n=Z} l memo _ =
+--     (foldl (\currentSum, thisTransition => currentSum + cast (length ((ne head) thisTransition))) 0 l, memo)
+-- finalLength' {n=(S k)} l memo r = --(trace $ show l ++ " " ++ show (S k)) $ 
+--     let newMap : List (Int, SortedMap (List Char,Nat) Int) = map (\possibleTransitions => -- List (List Char)
+--                     let (outcomes,m) : (List Int, SortedMap (List Char,Nat) Int) = foldl (\(l,currentMap), nextStep => 
+--                             case (lookup (nextStep,(S k)) memo) of
+--                                 Just result => (result::l, insert (nextStep,(S k)) result currentMap)
+--                                 Nothing => let (result, newMap) = finalLength' {n=k} (directional r ('A'::nextStep)) currentMap r in (result::l, insert (nextStep,(S k)) result newMap)) ([],memo) possibleTransitions -- we want the minimum cost for the next step
+--                             in ((ne head) (sort outcomes), m)) l
+--         (lengths, maps) = unzip newMap in (sum lengths, foldl mergeLeft empty maps)
+
+partial finalLength' : {n : Nat} -> IORef (SortedMap (Nat, List (List (List Char))) Int) -> List (List (List Char)) -> IORef (SortedMap (List Char) (List (List (List Char)))) -> Int
+finalLength' {n=Z} r1 l r =
+    foldl (\currentSum, thisTransition => currentSum + cast (length ((ne head) thisTransition))) 0 l
+finalLength' {n=(S k)} r1 l r = unsafePerformIO $ do
+    memo <- readIORef r1
+    case lookup ((S k),l) memo of
+        Just output => pure output
+        Nothing => do
+            let output = sum $ map (\possibleTransitions => -- List (List Char)
+                                    let outcomes : List Int = map (\nextStep => finalLength' {n=k} r1 (directional' ('A'::nextStep)) r) possibleTransitions -- we want the minimum cost for the next step
+                                        in (ne head) (sort outcomes)) l
+            modifyIORef r1 (insert ((S k),l) output)
+            pure output
 
 {-
 Day21> :exec printLn (finalLength' {n=0} c)
@@ -414,13 +428,17 @@ partial part2 : String -> IO Int
 part2 input = do
     let l = lines input
     let r = makeRef
-    let (complexities,_) = unzip $ map (\line => finalLength' {n=10} (numeric line) empty r) l
+    let r2 = makeRef
+    let complexities = map (\line => finalLength' {n=25} r2 (numeric line) r) l
     let numbers = map numericPart l
     pure $ sum (zipWith (*) complexities numbers)
 
 -- https://www.desmos.com/calculator/iybcizuenr : wait eight days for this to complete
 -- (the * 5 is because I wanted to test on just one instead of all 5 inputs)
 -- time to optimize more, maybe memoize something different (like `directional` since I assume that takes the longest time)
+
+-- Runtime with memoization: 51ms
+-- (without: 8 days...)
 
 public export
 partial solve : Fin 2 -> String -> IO Int
