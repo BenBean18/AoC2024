@@ -251,8 +251,8 @@ directional' u =
         in
         map (\(start,end) => shortestPresses [end] (directionalKeypad, directionalKeypad', directionalKeypadCoords) (directionalKeypad start)) pairs
 
-a : List (List Char)
-a = [['<', '^', '<', 'A'], ['^', '<', '<', 'A']] -- poof!
+a' : List (List Char) -- poof!
+a' = [['<', '^', '<', 'A'], ['^', '<', '<', 'A']]
 
 partial directional : IORef (SortedMap (List Char) (List (List (List Char)))) -> List Char -> List (List (List Char))
 directional r input = unsafePerformIO $ do
@@ -370,18 +370,25 @@ d = ['<', 'A']
 --                             in ((ne head) (sort outcomes), m)) l
 --         (lengths, maps) = unzip newMap in (sum lengths, foldl mergeLeft empty maps)
 
-partial finalLength' : {n : Nat} -> IORef (SortedMap (Nat, List (List (List Char))) Int) -> List (List (List Char)) -> IORef (SortedMap (List Char) (List (List (List Char)))) -> Int
-finalLength' {n=Z} r1 l r =
+-- example of a successful memoization: https://github.com/stefan-hoeck/aoc23/blob/main/src/Day12.idr
+0 Memo : Type -- the zero means the type is erased at runtime: https://idris2.readthedocs.io/en/latest/tutorial/multiplicities.html
+Memo = SortedMap (Nat, List (List (List Char))) Int
+
+-- I tried to do this the right way after looking at that example, but I think the numerous `mergeLeft`s are causing it to run too slowly.
+-- I'll try to look for a way to avoid this when I have more time, because it would be really cool to do this completely functionally
+
+partial finalLength' : {n : Nat} -> IORef (SortedMap (Nat, List (List (List Char))) Int) -> List (List (List Char)) -> Int
+finalLength' {n=Z} r l =
     foldl (\currentSum, thisTransition => currentSum + cast (length ((ne head) thisTransition))) 0 l
-finalLength' {n=(S k)} r1 l r = unsafePerformIO $ do
-    memo <- readIORef r1
+finalLength' {n=(S k)} r l = unsafePerformIO $ do
+    memo <- readIORef r
     case lookup ((S k),l) memo of
         Just output => pure output
         Nothing => do
             let output = sum $ map (\possibleTransitions => -- List (List Char)
-                                    let outcomes : List Int = map (\nextStep => finalLength' {n=k} r1 (directional' ('A'::nextStep)) r) possibleTransitions -- we want the minimum cost for the next step
+                                    let outcomes : List Int = map (\nextStep => finalLength' {n=k} r (directional' ('A'::nextStep))) possibleTransitions -- we want the minimum cost for the next step
                                         in (ne head) (sort outcomes)) l
-            modifyIORef r1 (insert ((S k),l) output)
+            modifyIORef r (insert ((S k),l) output)
             pure output
 
 {-
@@ -421,15 +428,11 @@ Day21> :exec printLn (finalLength' {n=2} c)
 68
  -}
 
-makeRef : (Ord k) => IORef (SortedMap k v)
-makeRef = unsafePerformIO $ newIORef (Data.SortedMap.empty)
-
 partial part2 : String -> IO Int
 part2 input = do
     let l = lines input
-    let r = makeRef
-    let r2 = makeRef
-    let complexities = map (\line => finalLength' {n=25} r2 (numeric line) r) l
+    r <- newIORef (Data.SortedMap.empty)
+    let complexities = map (\line => finalLength' {n=25} r (numeric line)) l
     let numbers = map numericPart l
     pure $ sum (zipWith (*) complexities numbers)
 
