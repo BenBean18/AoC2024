@@ -79,8 +79,42 @@ part1 input =
 
 -- Part 2
 
+-- largest connected component!
+
+-- i mean the naive way is to remove each consumed edge from the graph
+-- it's just a BFS to consume each edge, could iterate through all edges but that's slower
+
+removeEdge : Graph -> Vect 2 Computer -> Graph
+removeEdge g [a,b] = 
+    let newA = delete b $ fromMaybe [] (lookup a g)
+        newB = delete a $ fromMaybe [] (lookup b g) in (insert a newA (insert b newB g))
+
+removeVertex : Graph -> Computer -> Graph
+removeVertex g v =
+    let connectedTo = fromMaybe [] (lookup v g) in foldl (\graph, curVertex => insert curVertex (delete v $ fromMaybe [] (lookup curVertex g)) g) (delete v g) connectedTo
+
+-- need visited set to avoid cycles
+findConnected : Graph -> SortedSet Computer -> Computer -> List Computer
+findConnected g visited current =
+    if current `contains` visited then []
+    else
+        let neighbors = fromMaybe [] (lookup current g) in current :: concatMap (findConnected g (insert current visited)) neighbors
+
+connectedComponents : Graph -> List (List Computer)
+connectedComponents g = 
+    case keys g of
+        [] => []
+        (x::xs) =>
+            let next = findConnected g empty x in next :: connectedComponents (foldl removeVertex g next)
+
+-- f*** i misread the problem
+-- it's looking for the largest complete subgraph
+
 partial part2 : String -> Int
-part2 input = 2
+part2 input = 
+    let edges = map parseEdge (lines input)
+        graph = foldl addEdge empty edges
+        comps = sortBy (compare `on` length) $ connectedComponents graph in (trace $ show ((ne last) comps)) 2
 
 public export
 partial solve : Fin 2 -> String -> IO Int
