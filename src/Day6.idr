@@ -90,7 +90,7 @@ part2 input = do
         groupedMaps = grouped numPerThread allMaps
     m <- makeMutex
     ref <- newIORef (the Int 0)
-    threadIDs: List ThreadID <- traverse (\maps => fork $ do
+    threadIDs <- traverse (\maps => fork $ do
             putStrLn "Starting thread"
             let val = cast $ length $ filter (isLoop True st) maps
             mutexAcquire m

@@ -112,3 +112,11 @@ public export
 vis : Bool -> Lazy String -> a -> a
 vis True s a = trace s a
 vis False s a = a
+
+-- this only exists in the bleeding edge version of idris ig
+public export
+insertWith : (v -> v -> v) -> k -> v -> SortedMap k v -> SortedMap k v
+insertWith f k v xs =
+  case lookup k xs of
+    Just x  => insert k (f v x) xs
+    Nothing => insert k v xs
