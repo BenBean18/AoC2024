@@ -43,6 +43,21 @@ part1 input = sum (map (nthNumber {n=2000}) (map cast (lines input)))
 
 -- Part 2
 
+price : Int -> Int
+price = (`mod` 10)
+
+-- uhhhhh
+-- this seems like an optimization problem
+-- find the optimal sequence of four
+-- how many possible sequences of four are there
+-- well each digit can be (-9..9)...so 19 possibilities
+-- 19^4 = 130321 possible sequences
+
+-- ok idea
+-- iterate through all windows of 4 that appear in each of them
+-- store the price that appears after each window in a SortedMap (Vect 4 Int) (List Int)
+-- and then you just find the key corresponding to the highest value in the map
+
 partial part2 : String -> Int
 part2 input = 2
 
