@@ -54,12 +54,29 @@ price = (`mod` 10)
 -- 19^4 = 130321 possible sequences
 
 -- ok idea
--- iterate through all windows of 4 that appear in each of them
+-- iterate through all windows of 5 that appear in each of them
 -- store the price that appears after each window in a SortedMap (Vect 4 Int) (List Int)
 -- and then you just find the key corresponding to the highest value in the map
 
+-- WOAH
+-- i had this with lists before and had to add the empty case list
+-- forcing Vect (S k) a caused that to be a type error since it can't exist :)
+differences : Neg a => Vect (S k) a -> Vect k a
+differences (x::xs) = zipWith (-) (tail (x::xs)) (init (x::xs))
+
+nPrices : {n : Nat} -> Int -> List Int
+nPrices {n=Z} i = []
+nPrices {n=(S k)} i = price i :: nPrices {n=k} (nextNumber i)
+
+-- more efficient to just store a vector of 5 at a time and fill it with nextNumber, but a list of 2000 might not be *terrible*
+updateMap : SortedMap (Vect 4 Int) Int -> List Int -> SortedMap (Vect 4 Int) Int
+updateMap m (p1::p2::p3::p4::price::xs) = updateMap (insertWith (\new, old => old) (differences [p1,p2,p3,p4,price]) price m) (p2::p3::p4::price::xs)
+updateMap m _ = m
+
 partial part2 : String -> Int
-part2 input = 2
+part2 input = 
+    let maps = foldl (mergeWith (+)) empty ((map (\i => (updateMap empty (nPrices {n=2000} i))) (map cast (lines input))))
+        l = values maps in (ne last) (sort l)
 
 public export
 partial solve : Fin 2 -> String -> IO Int
