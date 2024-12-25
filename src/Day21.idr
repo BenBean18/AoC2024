@@ -440,7 +440,7 @@ part2 input = do
 -- (the * 5 is because I wanted to test on just one instead of all 5 inputs)
 -- time to optimize more, maybe memoize something different (like `directional` since I assume that takes the longest time)
 
--- Runtime with memoization: 51ms
+-- Runtime with memoization: 11ms
 -- (without: 8 days...)
 
 -- resources about functional memoization maybe before I forget:
