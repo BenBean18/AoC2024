@@ -124,23 +124,23 @@ algorithm BronKerbosch1(R, P, X) is
         P := P \ {v}
         X := X ⋃ {v}
  -}
-bronKerbosch' : Graph -> List Computer -> List Computer -> List Computer -> Maybe (List Computer)
-bronKerbosch' g r [] [] = (trace $ "end r=" ++ show r) $ 
-    Just r
-bronKerbosch' g r [] x = (trace $ "nope r=" ++ show r ++ " p=[] x=" ++ show x ++ "\n") $ 
-    Nothing
-bronKerbosch' g r p@(v::ps) x = (trace $ "r=" ++ show r ++ " p=" ++ show p ++ " x=" ++ show x ++ "\n") $
-    let newR = bronKerbosch' g (v::r) (intersect p (fromMaybe [] (lookup v g))) (intersect x (fromMaybe [] (lookup v g))) in
-        case newR of
-            Just r => Just r
-            Nothing => 
-                bronKerbosch' g r ps (v::x)
+bronKerbosch' : Graph -> List Computer -> List Computer -> List Computer -> List (List Computer)
+bronKerbosch' g r [] [] = -- (trace $ "end r=" ++ show r) $ 
+    [r]
+bronKerbosch' g r [] x = -- (trace $ "nope r=" ++ show r ++ " p=[] x=" ++ show x ++ "\n") $ 
+    []
+bronKerbosch' g r p@(v::ps) x = -- (trace $ "r=" ++ show r ++ " p=" ++ show p ++ " x=" ++ show x ++ "\n") $
+    bronKerbosch' g (v::r) (intersect p (fromMaybe [] (lookup v g))) (intersect x (fromMaybe [] (lookup v g))) ++ bronKerbosch' g r ps (v::x)
+
+toStr : Computer -> String
+toStr [a,b] = pack [a,b]
 
 partial part2 : String -> Int
 part2 input = 
     let edges = map parseEdge (lines input)
         graph = foldl addEdge empty edges
-        (Just maxClique) = bronKerbosch' graph [] (keys graph) [] in (trace $ show maxClique) 2
+        maximalCliques = bronKerbosch' graph [] (keys graph) []
+        largestMaximalClique = joinBy "," $ map toStr $ sort $ (ne last) (sortBy (compare `on` length) maximalCliques) in (trace $ largestMaximalClique) 2
 
 public export
 partial solve : Fin 2 -> String -> IO Int
