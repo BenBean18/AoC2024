@@ -54,3 +54,4 @@ idris2docs_venv
 .DS_Store
 
 *.txt
+*.dot

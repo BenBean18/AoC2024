@@ -164,6 +164,46 @@ toDot' [] = ""
 toDot' ((G in1 in2 out op)::xs) = 
     let s = checkOp op in (in1 ++ " -> " ++ out ++ "_" ++ s ++ " -> "++out++";\n" ++ in2 ++ " -> " ++ out ++ "_" ++ s ++ " -> "++out++";\n") ++ toDot' xs
 
+-- visualizing this, it does look like a ripple carry adder
+-- maybe can find swapped gates manually?
+
+-- easy pickings I think: regex "z.._[^X]" in dot since all of them should be XOR (except the carry out at the end)
+-- found z12_AND (swap with djg_XOR), z19_AND (swap with sbg_XOR), z37_OR (swap with dsd_XOR), and the last one which is actually correct
+-- so that's 3/4 of the swapped gates
+{-
+why that's nice
+>>> 64892933710960 ^ 64892950488176
+16777216
+
+a single bad bit, #24
+
+turns out swapping correctly makes this work better :)
+
+xor is 000000000000000000001000000000000000000000000
+
+swap process from abc to def:
+replace "-> abc" with "-> abc'"
+replace "-> def" with "-> abc"
+replace "-> abc'" with "-> def"
+
+after scrutinizing dot for bit 24, the XOR and AND from the first half adder are swapped
+mcq_XOR and hjm_AND
+
+XOR output going directly to OR, that's wrong
+
+after that swap it's functional!!!!!
+
+so:
+z12_AND (swap with djg_XOR), z19_AND (swap with sbg_XOR), z37_OR (swap with dsd_XOR), mcq_XOR (swap with hjm_AND)
+
+what do you get if you sort the names of the eight wires involved in a swap and then join those names with commas?
+
+djg,dsd,hjm,mcq,sbg,z12,z19,z37
+
+LETS GOOOOO
+
+time to write it in code
+ -}
 
 partial part2 : String -> Int
 part2 input = 
@@ -176,13 +216,13 @@ part2 input =
         gates : List (Maybe Gate) = map ((flip lookup) gateMap) s
         final : State = foldl eval initial gates
         xs = filter (\s => ((ne head) (unpack s)) == 'x') (keys final) -- should be correctly sorted
-        xbits = reverse $ map (\z => if ((flip lookup) final z) == Just True then the Int 1 else 0) xs
+        xbits = map (\z => if ((flip lookup) final z) == Just True then the Int 1 else 0) xs
         ys = filter (\s => ((ne head) (unpack s)) == 'y') (keys final) -- should be correctly sorted
-        ybits = reverse $ map (\z => if ((flip lookup) final z) == Just True then the Int 1 else 0) ys
+        ybits = map (\z => if ((flip lookup) final z) == Just True then the Int 1 else 0) ys
         zs = filter (\s => ((ne head) (unpack s)) == 'z') (keys final) -- should be correctly sorted
-        bits = reverse $ map (\z => if ((flip lookup) final z) == Just True then the Int 1 else 0) zs
+        bits = map (\z => if ((flip lookup) final z) == Just True then the Int 1 else 0) zs
         in --(trace $ show gates ++ "\n" ++ show graph ++ "\n" ++ show initial ++ "\n" ++ show s ++ "\n\n" ++ show final) 
-        --(trace $ (joinBy "" (map show xbits)) ++ "+" ++ (joinBy "" (map show ybits)) ++ "/=" ++ (joinBy "" (map show bits)) ++ "=" ++ show (binToInt (reverse bits))) 2
+        (trace $ (show $ binToInt xbits) ++ "+" ++ (show $ binToInt ybits) ++ "/=" ++ (joinBy "" (map show bits)) ++ "=" ++ show (binToInt bits)) $
         -- (trace $ (toDot graph (keys graph))) 2
         (trace $ (toDot' (map (fromMaybe (G "" "" "" (\a, b => a && b))) gates))) 2
 
