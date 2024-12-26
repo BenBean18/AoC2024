@@ -79,7 +79,7 @@ part1 input =
 
 -- Part 2
 
--- largest connected component!
+-- largest connected component! (wrong, i initially misread the problem)
 
 -- i mean the naive way is to remove each consumed edge from the graph
 -- it's just a BFS to consume each edge, could iterate through all edges but that's slower
@@ -110,11 +110,37 @@ connectedComponents g =
 -- f*** i misread the problem
 -- it's looking for the largest complete subgraph
 
+-- this is the "Clique problem" according to wikipedia
+
+-- Bron-Kerbosch algorithm exists to solve this
+
+-- translated from wikipedia pseudocode
+{-
+algorithm BronKerbosch1(R, P, X) is
+    if P and X are both empty then
+        report R as a maximal clique
+    for each vertex v in P do
+        BronKerbosch1(R ⋃ {v}, P ⋂ N(v), X ⋂ N(v))
+        P := P \ {v}
+        X := X ⋃ {v}
+ -}
+bronKerbosch' : Graph -> List Computer -> List Computer -> List Computer -> Maybe (List Computer)
+bronKerbosch' g r [] [] = (trace $ "end r=" ++ show r) $ 
+    Just r
+bronKerbosch' g r [] x = (trace $ "nope r=" ++ show r ++ " p=[] x=" ++ show x ++ "\n") $ 
+    Nothing
+bronKerbosch' g r p@(v::ps) x = (trace $ "r=" ++ show r ++ " p=" ++ show p ++ " x=" ++ show x ++ "\n") $
+    let newR = bronKerbosch' g (v::r) (intersect p (fromMaybe [] (lookup v g))) (intersect x (fromMaybe [] (lookup v g))) in
+        case newR of
+            Just r => Just r
+            Nothing => 
+                bronKerbosch' g r ps (v::x)
+
 partial part2 : String -> Int
 part2 input = 
     let edges = map parseEdge (lines input)
         graph = foldl addEdge empty edges
-        comps = sortBy (compare `on` length) $ connectedComponents graph in (trace $ show ((ne last) comps)) 2
+        (Just maxClique) = bronKerbosch' graph [] (keys graph) [] in (trace $ show maxClique) 2
 
 public export
 partial solve : Fin 2 -> String -> IO Int
