@@ -71,7 +71,7 @@ topologicallySort graph (x::xs) =
         newGraph : Graph = insert x [] graph -- no outgoing edges anymore
         v : List String = concat $ values newGraph
         goodNeighs = filter (\n => not (n `elem` v)) neighbors in
-        x :: topologicallySort graph (goodNeighs ++ xs)
+        x :: topologicallySort newGraph (goodNeighs ++ xs) -- recursing on updated value is always important lol
 
 {-
 x00 AND y00 -> z00
@@ -91,8 +91,9 @@ parseGate s =
 0 State : Type
 State = SortedMap String Bool
 
-partial eval : State -> Gate -> State
-eval s (G in1 in2 out fn) = 
+partial eval : State -> Maybe Gate -> State
+eval s Nothing = (trace "wat") s
+eval s (Just gate@(G in1 in2 out fn)) =
     let (Just in1Val) = lookup in1 s -- partial, because if topo sort is bad this errors which is good
         (Just in2Val) = lookup in2 s
         in insert out (fn in1Val in2Val) s
@@ -108,9 +109,15 @@ part1 input =
     let (start ::: gateStrings) = splitOn "" (lines input)
         gates = map parseGate ((ne head) gateStrings)
         graph = foldl addGateToGraph empty gates
-        s : List String = topologicallySort graph (keys graph)
         initial : State = foldl parseStart empty start
-        final = foldl eval initial s in (trace $ show gates ++ "\n" ++ show graph ++ "\n" ++ show initial ++ "\n" ++ show s ++ "\n\n" ++ show final) 1
+        s : List String = topologicallySort graph (keys initial)
+        gateMap : SortedMap String Gate = foldl (\cur, gate => insert (output gate) gate cur) empty gates
+        gates : List (Maybe Gate) = map ((flip lookup) gateMap) s
+        final : State = foldl eval initial gates
+        zs = filter (\s => ((ne head) (unpack s)) == 'z') (keys final) -- should be correctly sorted
+        bits = reverse $ map (\z => if ((flip lookup) final z) == Just True then 1 else 0) zs
+        in --(trace $ show gates ++ "\n" ++ show graph ++ "\n" ++ show initial ++ "\n" ++ show s ++ "\n\n" ++ show final) 
+        (trace $ show (joinBy "" (map show bits))) 1
 
 -- Part 2
 
